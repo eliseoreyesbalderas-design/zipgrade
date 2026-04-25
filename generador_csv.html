@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Generador de CSV</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --blue-800: #0C447C;
+  --blue-600: #185FA5;
+  --blue-400: #378ADD;
+  --blue-200: #85B7EB;
+  --blue-100: #B5D4F4;
+  --gray-900: #1a1d23;
+  --gray-800: #23272f;
+  --gray-700: #2e3340;
+  --gray-400: #6b7280;
+  --gray-200: #c8cdd6;
+  --white: #ffffff;
+  --radius-sm: 6px;
+  --radius-lg: 16px;
+}
+
+html, body { height: 100%; font-family: 'Sora', sans-serif; background: var(--gray-900); color: var(--white); -webkit-font-smoothing: antialiased; }
+body { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* HEADER */
+header { background: var(--gray-800); border-bottom: 1px solid rgba(255,255,255,0.06); padding: 0 28px; height: 58px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.header-brand { display: flex; align-items: center; gap: 12px; }
+.brand-icon { width: 32px; height: 32px; background: var(--blue-600); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; }
+.brand-icon svg { width: 17px; height: 17px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.brand-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.brand-sub { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+.header-meta { font-size: 11px; color: var(--gray-400); font-family: 'DM Mono', monospace; display: flex; align-items: center; gap: 8px; }
+.meta-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--blue-400); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+/* TOOLBAR */
+.toolbar { background: var(--gray-800); border-bottom: 1px solid rgba(255,255,255,0.06); padding: 9px 28px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 10px; }
+.toolbar-left { display: flex; align-items: center; gap: 8px; }
+.stat-pill { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--gray-400); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 3px 10px; display: flex; gap: 5px; align-items: center; }
+.stat-pill strong { color: var(--blue-200); font-weight: 500; }
+.toolbar-right { display: flex; gap: 7px; }
+
+/* BUTTONS */
+.btn { font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 500; padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid transparent; cursor: pointer; transition: all 0.13s; display: inline-flex; align-items: center; gap: 6px; }
+.btn svg { width: 13px; height: 13px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.btn-ghost { background: transparent; border-color: rgba(255,255,255,0.12); color: var(--gray-200); }
+.btn-ghost:hover { background: rgba(255,255,255,0.06); }
+.btn-danger { background: transparent; border-color: rgba(163,45,45,0.5); color: #f09595; }
+.btn-danger:hover { background: rgba(163,45,45,0.15); }
+.btn-primary { background: var(--blue-600); border-color: var(--blue-600); color: #fff; }
+.btn-primary:hover { background: var(--blue-800); border-color: var(--blue-800); }
+
+/* PASTE HINT */
+.paste-hint { display: flex; align-items: center; gap: 9px; padding: 7px 28px; background: rgba(55,138,221,0.07); border-bottom: 1px solid rgba(55,138,221,0.15); font-size: 12px; color: var(--blue-200); flex-shrink: 0; }
+.paste-hint svg { width: 13px; height: 13px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.paste-hint kbd { display: inline-flex; align-items: center; background: rgba(55,138,221,0.2); border: 1px solid rgba(55,138,221,0.35); border-radius: 4px; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--blue-100); padding: 1px 7px; }
+
+/* MAIN */
+main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.table-container { flex: 1; overflow: auto; }
+
+/* TABLE */
+table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; min-width: 660px; }
+thead { position: sticky; top: 0; z-index: 10; }
+thead tr { background: var(--gray-700); }
+th { padding: 9px 12px; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-400); border-bottom: 1px solid rgba(255,255,255,0.06); border-right: 1px solid rgba(255,255,255,0.04); font-family: 'DM Mono', monospace; white-space: nowrap; }
+th:first-child { width: 40px; text-align: center; }
+th:nth-child(2) { width: 22%; }
+th:nth-child(3) { width: 17%; }
+th:nth-child(4) { width: 17%; }
+th:nth-child(5) { width: 16%; }
+th:nth-child(6) { width: 9%; }
+th:last-child   { width: 42px; border-right: none; }
+tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.07s; }
+tbody tr:hover { background: rgba(255,255,255,0.03); }
+td { padding: 0; border-right: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+td:last-child { border-right: none; }
+.row-num { text-align: center; font-size: 11px; font-family: 'DM Mono', monospace; color: rgba(255,255,255,0.2); padding: 0 4px; user-select: none; }
+td input { width: 100%; padding: 9px 12px; background: transparent; border: none; outline: none; font-family: 'Sora', sans-serif; font-size: 13px; color: var(--white); caret-color: var(--blue-400); }
+td input::placeholder { color: rgba(255,255,255,0.17); font-size: 12px; }
+td input:focus { background: rgba(55,138,221,0.12); box-shadow: inset 0 0 0 1.5px var(--blue-400); }
+.col-asig input { font-family: 'DM Mono', monospace; font-size: 12px; }
+.col-grp input  { font-family: 'DM Mono', monospace; text-align: center; }
+.td-action { text-align: center; }
+.del-btn { background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.18); padding: 6px 8px; border-radius: var(--radius-sm); font-size: 15px; transition: all 0.12s; display: inline-flex; align-items: center; }
+.del-btn:hover { color: #f09595; background: rgba(163,45,45,0.2); }
+.empty-row td { padding: 48px; text-align: center; color: rgba(255,255,255,0.18); font-size: 13px; border-right: none; }
+
+/* ADD ROW */
+.add-row-bar { border-top: 1px solid rgba(255,255,255,0.05); background: var(--gray-800); flex-shrink: 0; }
+.add-row-btn { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 28px; background: transparent; border: none; font-family: 'Sora', sans-serif; font-size: 12px; color: var(--gray-400); cursor: pointer; transition: all 0.11s; }
+.add-row-btn:hover { color: var(--blue-200); background: rgba(55,138,221,0.06); }
+.add-icon { width: 20px; height: 20px; border: 1px dashed rgba(255,255,255,0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; transition: border-color 0.11s; }
+.add-row-btn:hover .add-icon { border-color: var(--blue-400); color: var(--blue-400); }
+
+/* FOOTER */
+footer { background: var(--gray-800); border-top: 1px solid rgba(255,255,255,0.05); padding: 7px 28px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.footer-keys { display: flex; gap: 18px; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--gray-400); }
+.footer-keys span { display: flex; align-items: center; gap: 5px; }
+.kbd { display: inline-flex; align-items: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 3px; font-size: 10px; padding: 1px 5px; color: var(--gray-200); }
+.footer-brand { font-size: 11px; color: rgba(255,255,255,0.14); font-family: 'DM Mono', monospace; }
+
+/* TOAST */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--gray-700); border: 1px solid rgba(255,255,255,0.1); color: var(--white); font-size: 13px; padding: 9px 20px; border-radius: 30px; opacity: 0; pointer-events: none; transition: all 0.22s cubic-bezier(0.34,1.56,0.64,1); white-space: nowrap; z-index: 9999; display: flex; align-items: center; gap: 8px; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* PASTE OVERLAY */
+.paste-overlay { display: none; position: fixed; inset: 0; z-index: 500; background: rgba(10,18,30,0.8); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
+.paste-overlay.active { display: flex; }
+.paste-overlay-box { border: 2px dashed var(--blue-400); border-radius: var(--radius-lg); padding: 48px 64px; text-align: center; animation: popIn 0.2s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes popIn { from{transform:scale(.92);opacity:0} to{transform:scale(1);opacity:1} }
+.paste-overlay-icon { font-size: 38px; margin-bottom: 10px; }
+.paste-overlay-title { font-size: 17px; font-weight: 600; margin-bottom: 5px; }
+.paste-overlay-sub { font-size: 13px; color: var(--gray-400); }
+
+/* MODAL */
+.modal-bg { display: none; position: fixed; inset: 0; z-index: 600; background: rgba(10,18,30,0.85); backdrop-filter: blur(5px); align-items: center; justify-content: center; }
+.modal-bg.active { display: flex; }
+.modal { background: var(--gray-800); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg); width: min(760px, 95vw); max-height: 88vh; display: flex; flex-direction: column; animation: popIn 0.2s cubic-bezier(0.34,1.56,0.64,1); overflow: hidden; }
+.modal-header { padding: 18px 22px 14px; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.modal-title { font-size: 15px; font-weight: 600; }
+.modal-sub { font-size: 12px; color: var(--gray-400); margin-top: 3px; }
+.modal-close { background: none; border: none; color: var(--gray-400); font-size: 20px; cursor: pointer; padding: 0 4px; transition: color .12s; }
+.modal-close:hover { color: var(--white); }
+.modal-mapping { padding: 12px 22px; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+.mapping-label { font-size: 11px; color: var(--gray-400); font-family: 'DM Mono', monospace; }
+.mapping-col { display: flex; align-items: center; gap: 5px; background: rgba(55,138,221,0.1); border: 1px solid rgba(55,138,221,0.25); border-radius: 20px; padding: 3px 10px; font-size: 11px; font-family: 'DM Mono', monospace; }
+.mapping-col .arrow { color: var(--blue-400); }
+.mapping-col .target { color: var(--blue-100); font-weight: 500; }
+.mapping-col .src { color: var(--gray-400); }
+.modal-preview { flex: 1; overflow: auto; }
+.modal-preview table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: 'DM Mono', monospace; table-layout: auto; }
+.modal-preview thead tr { background: var(--gray-700); position: sticky; top: 0; }
+.modal-preview th { padding: 7px 12px; font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--blue-200); border-bottom: 1px solid rgba(255,255,255,0.06); border-right: 1px solid rgba(255,255,255,0.04); white-space: nowrap; font-weight: 600; }
+.modal-preview th.ign { color: rgba(255,255,255,.2); }
+.modal-preview th:last-child, .modal-preview td:last-child { border-right: none; }
+.modal-preview td { padding: 6px 12px; color: var(--gray-200); border-bottom: 1px solid rgba(255,255,255,0.04); border-right: 1px solid rgba(255,255,255,0.04); white-space: nowrap; }
+.modal-preview td.ign { color: rgba(255,255,255,.2); font-style: italic; }
+.modal-preview tbody tr:hover { background: rgba(255,255,255,0.03); }
+.modal-footer { padding: 13px 22px; border-top: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.modal-info { font-size: 12px; color: var(--gray-400); }
+.modal-info strong { color: var(--white); }
+.modal-actions { display: flex; gap: 8px; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    </div>
+    <div>
+      <div class="brand-title">Generador de CSV</div>
+      <div class="brand-sub">Captura y exportación con caracteres especiales</div>
+    </div>
+  </div>
+  <div class="header-meta">
+    <div class="meta-dot"></div>
+    UTF-8 &nbsp;·&nbsp; SURVAL
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="toolbar-left">
+    <div class="stat-pill">Filas: <strong id="row-count">0</strong></div>
+    <div class="stat-pill">Columnas: <strong>5</strong></div>
+  </div>
+  <div class="toolbar-right">
+    <button class="btn btn-ghost" onclick="importCSV()">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Importar CSV
+    </button>
+    <button class="btn btn-danger" onclick="clearAll()">
+      <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      Limpiar
+    </button>
+    <button class="btn btn-primary" onclick="exportCSV()">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Descargar CSV
+    </button>
+  </div>
+</div>
+
+<div class="paste-hint">
+  <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+  Pega datos desde Excel u otra tabla con <kbd>Ctrl + V</kbd> en cualquier parte de la app — se detectan y acomodan automáticamente.
+</div>
+
+<main>
+  <div class="table-container">
+    <table id="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nombres</th>
+          <th>Primer apellido</th>
+          <th>Segundo apellido</th>
+          <th>Asignación</th>
+          <th>Grupo</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="add-row-bar">
+    <button class="add-row-btn" onclick="addRow()">
+      <span class="add-icon">+</span>
+      Agregar nueva fila
+    </button>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-keys">
+    <span><kbd class="kbd">Tab</kbd> avanza columna</span>
+    <span><kbd class="kbd">Enter</kbd> baja fila</span>
+    <span><kbd class="kbd">↑ ↓</kbd> navegar</span>
+  </div>
+  <div class="footer-brand">generador-csv &nbsp;·&nbsp; UTF-8 BOM</div>
+</footer>
+
+<div class="toast" id="toast">
+  <span id="toast-icon"></span>
+  <span id="toast-msg"></span>
+</div>
+
+<input type="file" id="file-input" accept=".csv" style="display:none" onchange="handleFileImport(event)" />
+
+<div class="paste-overlay" id="paste-overlay">
+  <div class="paste-overlay-box">
+    <div class="paste-overlay-icon">📋</div>
+    <div class="paste-overlay-title">Procesando datos pegados…</div>
+    <div class="paste-overlay-sub">Detectando columnas y filas</div>
+  </div>
+</div>
+
+<div class="modal-bg" id="paste-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Vista previa del pegado</div>
+        <div class="modal-sub" id="modal-sub">Revisa los datos antes de agregarlos.</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-mapping" id="modal-mapping"></div>
+    <div class="modal-preview">
+      <table>
+        <thead id="modal-thead"></thead>
+        <tbody id="modal-tbody"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <div class="modal-info" id="modal-info"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmPaste()">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Agregar a la tabla
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var COLS = ['NOMBRES','PRIMER_APELLIDO','SEGUNDO_APELLIDO','ASIGNACION','GRUPO'];
+
+var PLACEHOLDERS = {
+  NOMBRES:          'Ej: XIMENA SARAHÍ',
+  PRIMER_APELLIDO:  'Ej: PADRÓN',
+  SEGUNDO_APELLIDO: 'Ej: ZÚÑIGA',
+  ASIGNACION:       'Ej: 004070109',
+  GRUPO:            'A / B'
+};
+
+var COL_CLASS = { ASIGNACION: 'col-asig', GRUPO: 'col-grp' };
+
+var COL_ALIASES = {
+  NOMBRES:          ['nombres','nombre','name','names','first name','firstname'],
+  PRIMER_APELLIDO:  ['primer apellido','primer_apellido','apellido1','apellido paterno','paterno','last name','lastname','surname'],
+  SEGUNDO_APELLIDO: ['segundo apellido','segundo_apellido','apellido2','apellido materno','materno','second last name','second surname'],
+  ASIGNACION:       ['asignacion','asig','assignment','clave','codigo'],
+  GRUPO:            ['grupo','group','gpo','grp','clase']
+};
+
+var rows = [];
+var idCounter = 0;
+var pendingPaste = [];
+
+function uid() { idCounter++; return idCounter; }
+
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showToast(msg, icon) {
+  var t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  document.getElementById('toast-icon').textContent = icon || '';
+  t.classList.add('show');
+  clearTimeout(t._tmr);
+  t._tmr = setTimeout(function() { t.classList.remove('show'); }, 2800);
+}
+
+function updateCount() {
+  document.getElementById('row-count').textContent = rows.length;
+}
+
+function render() {
+  var tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  if (rows.length === 0) {
+    var tr = document.createElement('tr');
+    tr.className = 'empty-row';
+    tr.innerHTML = '<td colspan="7">Sin registros. Agrega una fila o pega datos desde Excel con Ctrl+V.</td>';
+    tbody.appendChild(tr);
+    updateCount();
+    return;
+  }
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var tr2 = document.createElement('tr');
+    var html = '<td class="row-num">' + (i + 1) + '</td>';
+    for (var ci = 0; ci < COLS.length; ci++) {
+      var col = COLS[ci];
+      var cls = COL_CLASS[col] ? ' class="' + COL_CLASS[col] + '"' : '';
+      html += '<td' + cls + '>'
+        + '<input type="text"'
+        + ' value="' + esc(row[col]) + '"'
+        + ' placeholder="' + esc(PLACEHOLDERS[col] || '') + '"'
+        + ' id="c' + row.id + '_' + ci + '"'
+        + ' data-id="' + row.id + '"'
+        + ' data-col="' + col + '"'
+        + ' data-ri="' + i + '"'
+        + ' data-ci="' + ci + '"'
+        + ' oninput="onInput(this)"'
+        + ' onkeydown="onKeyNav(event,' + i + ',' + ci + ')"'
+        + ' /></td>';
+    }
+    html += '<td class="td-action"><button class="del-btn" title="Eliminar" onclick="deleteRow(' + row.id + ')">✕</button></td>';
+    tr2.innerHTML = html;
+    tbody.appendChild(tr2);
+  }
+  updateCount();
+}
+
+function onInput(input) {
+  var id = parseInt(input.getAttribute('data-id'));
+  var col = input.getAttribute('data-col');
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].id === id) { rows[i][col] = input.value; break; }
+  }
+}
+
+function onKeyNav(e, ri, ci) {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    if (ci + 1 < COLS.length) { focusCell(ri, ci + 1); }
+    else if (ri + 1 < rows.length) { focusCell(ri + 1, 0); }
+    else { addRow(true, 0); }
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (ri + 1 < rows.length) { focusCell(ri + 1, ci); }
+    else { addRow(true, ci); }
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (ri + 1 < rows.length) focusCell(ri + 1, ci);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (ri > 0) focusCell(ri - 1, ci);
+  }
+}
+
+function focusCell(ri, ci) {
+  if (ri >= 0 && ri < rows.length) {
+    var el = document.getElementById('c' + rows[ri].id + '_' + ci);
+    if (el) { el.focus(); el.select(); }
+  }
+}
+
+function addRow(focusAfter, focusCol) {
+  var id = uid();
+  var row = { id: id };
+  for (var i = 0; i < COLS.length; i++) row[COLS[i]] = '';
+  rows.push(row);
+  render();
+  if (focusAfter !== false) {
+    var fc = (focusCol !== undefined) ? focusCol : 0;
+    var el = document.getElementById('c' + id + '_' + fc);
+    if (el) el.focus();
+  }
+}
+
+function deleteRow(id) {
+  var next = [];
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].id !== id) next.push(rows[i]);
+  }
+  rows = next;
+  render();
+}
+
+function clearAll() {
+  if (rows.length === 0) return;
+  if (!confirm('¿Eliminar todos los registros?')) return;
+  rows = [];
+  render();
+  showToast('Tabla limpiada.', '🗑');
+}
+
+function exportCSV() {
+  if (rows.length === 0) { showToast('No hay datos para exportar.', '⚠'); return; }
+  var BOM = '\uFEFF';
+  var lines = [];
+  lines.push(COLS.join(','));
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var cells = [];
+    for (var c = 0; c < COLS.length; c++) {
+      var v = (r[COLS[c]] || '').trim();
+      if (v.indexOf(',') !== -1 || v.indexOf('"') !== -1 || v.indexOf('\n') !== -1) {
+        v = '"' + v.replace(/"/g, '""') + '"';
+      }
+      cells.push(v);
+    }
+    lines.push(cells.join(','));
+  }
+  var csv = BOM + lines.join('\r\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'SURVAL_captura.csv'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV descargado — ' + rows.length + ' registros.', '↓');
+}
+
+function importCSV() { document.getElementById('file-input').click(); }
+
+function handleFileImport(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var text = ev.target.result;
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    var lines = text.replace(/\r/g, '').split('\n');
+    var nonEmpty = [];
+    for (var i = 0; i < lines.length; i++) { if (lines[i].trim()) nonEmpty.push(lines[i]); }
+    if (nonEmpty.length < 2) { showToast('El archivo no tiene datos.', '⚠'); return; }
+    var headerLine = nonEmpty[0].split(',');
+    var colMap = {};
+    for (var c = 0; c < COLS.length; c++) {
+      for (var h = 0; h < headerLine.length; h++) {
+        if (headerLine[h].trim().toUpperCase() === COLS[c]) { colMap[COLS[c]] = h; break; }
+      }
+    }
+    var imported = [];
+    for (var li = 1; li < nonEmpty.length; li++) {
+      var parts = parseCSVLine(nonEmpty[li]);
+      var row = { id: uid() };
+      for (var c2 = 0; c2 < COLS.length; c2++) {
+        row[COLS[c2]] = (colMap[COLS[c2]] !== undefined) ? (parts[colMap[COLS[c2]]] || '').trim() : '';
+      }
+      imported.push(row);
+    }
+    if (rows.length > 0) {
+      if (!confirm('Se agregarán ' + imported.length + ' filas a los ' + rows.length + ' existentes. ¿Continuar?')) {
+        e.target.value = ''; return;
+      }
+    }
+    for (var ii = 0; ii < imported.length; ii++) rows.push(imported[ii]);
+    render();
+    showToast(imported.length + ' registros importados.', '↑');
+    e.target.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSVLine(line) {
+  var result = [], cur = '', inQ = false;
+  for (var i = 0; i < line.length; i++) {
+    var ch = line[i];
+    if (ch === '"') {
+      if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (ch === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += ch; }
+  }
+  result.push(cur);
+  return result;
+}
+
+/* ─── PASTE FROM EXCEL ─────────────────────────────────── */
+function normalizeKey(str) {
+  return str.trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9 _]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function detectCol(headerCell) {
+  var norm = normalizeKey(headerCell);
+  for (var col in COL_ALIASES) {
+    var aliases = COL_ALIASES[col];
+    for (var i = 0; i < aliases.length; i++) {
+      if (normalizeKey(aliases[i]) === norm) return col;
+    }
+  }
+  return null;
+}
+
+function parseTSV(text) {
+  var lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  var result = [];
+  for (var i = 0; i < lines.length; i++) {
+    if (lines[i].trim() !== '') {
+      result.push(lines[i].split('\t').map(function(c) { return c.trim(); }));
+    }
+  }
+  return result;
+}
+
+document.addEventListener('paste', function(e) {
+  var active = document.activeElement;
+  var isInCell = active && active.tagName === 'INPUT' && active.getAttribute('data-col');
+  var text = (e.clipboardData || window.clipboardData).getData('text');
+  if (!text) return;
+  var rows2d = parseTSV(text);
+  if (rows2d.length === 0) return;
+  if (isInCell && rows2d.length === 1 && rows2d[0].length === 1) return;
+  e.preventDefault();
+  document.getElementById('paste-overlay').classList.add('active');
+  var startRi = isInCell ? parseInt(active.getAttribute('data-ri')) : null;
+  var startCi = isInCell ? parseInt(active.getAttribute('data-ci')) : null;
+  setTimeout(function() {
+    document.getElementById('paste-overlay').classList.remove('active');
+    processPaste(rows2d, startRi, startCi);
+  }, 320);
+});
+
+function processPaste(rows2d, startRi, startCi) {
+  if (!rows2d || rows2d.length === 0) return;
+  var firstRow = rows2d[0];
+  var firstMapped = [];
+  for (var i = 0; i < firstRow.length; i++) firstMapped.push(detectCol(firstRow[i]));
+  var matchCount = 0;
+  for (var i = 0; i < firstMapped.length; i++) { if (firstMapped[i]) matchCount++; }
+  var allText = true;
+  for (var i = 0; i < firstRow.length; i++) {
+    if (!isNaN(firstRow[i]) || firstRow[i].length === 0 || firstRow[i].length > 50) { allText = false; break; }
+  }
+  var hasHeader = matchCount >= 1 || (firstRow.length > 1 && allText);
+  var colMapping, dataRows;
+  if (hasHeader) {
+    colMapping = firstMapped;
+    dataRows = rows2d.slice(1);
+  } else {
+    colMapping = [];
+    for (var i = 0; i < firstRow.length; i++) {
+      var offset = (startCi !== null && startCi !== undefined) ? startCi + i : i;
+      colMapping.push(offset < COLS.length ? COLS[offset] : null);
+    }
+    dataRows = rows2d;
+  }
+  var filtered = [];
+  for (var i = 0; i < dataRows.length; i++) {
+    var r = dataRows[i];
+    var hasData = false;
+    for (var j = 0; j < r.length; j++) { if (r[j].trim() !== '') { hasData = true; break; } }
+    if (hasData) filtered.push(r);
+  }
+  dataRows = filtered;
+  if (dataRows.length === 0) { showToast('No se detectaron datos para pegar.', '⚠'); return; }
+  pendingPaste = [];
+  for (var i = 0; i < dataRows.length; i++) {
+    var r = dataRows[i];
+    var row = { id: uid() };
+    for (var c = 0; c < COLS.length; c++) row[COLS[c]] = '';
+    for (var j = 0; j < r.length; j++) {
+      if (colMapping[j]) row[colMapping[j]] = r[j];
+    }
+    pendingPaste.push(row);
+  }
+  buildModal(firstRow, hasHeader, colMapping, dataRows);
+}
+
+function buildModal(srcHeaders, hasHeader, colMapping, dataRows) {
+  var mappingEl = document.getElementById('modal-mapping');
+  var mappedCount = 0, ignoredCount = 0;
+  for (var i = 0; i < colMapping.length; i++) { if (colMapping[i]) mappedCount++; else ignoredCount++; }
+  var html = '<span class="mapping-label">Mapeo detectado:</span> ';
+  for (var i = 0; i < colMapping.length; i++) {
+    var srcLabel = hasHeader ? srcHeaders[i] : ('Col ' + (i+1));
+    if (colMapping[i]) {
+      html += '<span class="mapping-col"><span class="src">' + esc(srcLabel) + '</span><span class="arrow"> → </span><span class="target">' + colMapping[i] + '</span></span> ';
+    }
+  }
+  if (ignoredCount > 0) {
+    html += '<span class="mapping-label">· ' + ignoredCount + ' col(s) ignorada(s)</span>';
+  }
+  mappingEl.innerHTML = html;
+
+  var thead = document.getElementById('modal-thead');
+  thead.innerHTML = '';
+  var trh = document.createElement('tr');
+  for (var i = 0; i < colMapping.length; i++) {
+    var th = document.createElement('th');
+    var srcLabel = hasHeader ? srcHeaders[i] : ('Col ' + (i+1));
+    th.textContent = colMapping[i] ? (srcLabel + ' → ' + colMapping[i]) : srcLabel;
+    if (!colMapping[i]) th.className = 'ign';
+    trh.appendChild(th);
+  }
+  thead.appendChild(trh);
+
+  var tbody = document.getElementById('modal-tbody');
+  tbody.innerHTML = '';
+  var limit = Math.min(dataRows.length, 50);
+  for (var i = 0; i < limit; i++) {
+    var tr = document.createElement('tr');
+    for (var j = 0; j < dataRows[i].length; j++) {
+      var td = document.createElement('td');
+      td.textContent = dataRows[i][j];
+      if (!colMapping[j]) td.className = 'ign';
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+
+  document.getElementById('modal-info').innerHTML =
+    '<strong>' + pendingPaste.length + '</strong> filas · <strong>' + mappedCount + '</strong> columnas mapeadas'
+    + (dataRows.length > 50 ? ' · mostrando primeras 50' : '');
+
+  document.getElementById('modal-sub').textContent = hasHeader
+    ? 'Encabezado detectado — columnas mapeadas automáticamente.'
+    : 'Sin encabezado — columnas mapeadas por posición.';
+
+  document.getElementById('paste-modal').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('paste-modal').classList.remove('active');
+  pendingPaste = [];
+}
+
+function confirmPaste() {
+  if (pendingPaste.length === 0) return;
+  if (rows.length === 1) {
+    var empty = true;
+    for (var c = 0; c < COLS.length; c++) { if (rows[0][COLS[c]]) { empty = false; break; } }
+    if (empty) rows = [];
+  }
+  for (var i = 0; i < pendingPaste.length; i++) rows.push(pendingPaste[i]);
+  var n = pendingPaste.length;
+  pendingPaste = [];
+  document.getElementById('paste-modal').classList.remove('active');
+  render();
+  showToast(n + ' fila(s) pegadas correctamente.', '📋');
+}
+
+document.getElementById('paste-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+addRow();
+</script>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suite de Generación de Exámenes</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#0f172a;
+  --card:#1e293b;
+  --accent:#38bdf8;
+  --accent2:#0ea5e9;
+  --text:#e2e8f0;
+  --muted:#64748b;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+  font-family:'Sora',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+/* HEADER */
+header{
+  padding:16px 28px;
+  background:#020617;
+  border-bottom:1px solid #1e293b;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+header h1{
+  font-size:16px;
+  letter-spacing:.08em;
+}
+
+header span{
+  font-size:12px;
+  color:var(--muted);
+}
+
+/* MAIN */
+main{
+  flex:1;
+  display:flex;
+  overflow:hidden;
+}
+
+/* SIDEBAR */
+.sidebar{
+  width:260px;
+  background:#020617;
+  border-right:1px solid #1e293b;
+  padding:20px;
+}
+
+.menu-title{
+  font-size:11px;
+  color:var(--muted);
+  margin-bottom:12px;
+  text-transform:uppercase;
+  letter-spacing:.1em;
+}
+
+.menu{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.menu button{
+  background:var(--card);
+  border:1px solid #334155;
+  color:var(--text);
+  padding:12px;
+  border-radius:10px;
+  cursor:pointer;
+  text-align:left;
+  transition:.2s;
+}
+
+.menu button:hover{
+  border-color:var(--accent);
+  color:var(--accent);
+}
+
+.menu button.active{
+  background:var(--accent);
+  color:#020617;
+  border-color:var(--accent);
+}
+
+/* CONTENT */
+.content{
+  flex:1;
+  position:relative;
+}
+
+iframe{
+  width:100%;
+  height:100%;
+  border:none;
+}
+
+/* WELCOME */
+.welcome{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:12px;
+  text-align:center;
+}
+
+.welcome h2{
+  font-size:28px;
+}
+
+.welcome p{
+  color:var(--muted);
+  max-width:400px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>Suite Profesional de Exámenes</h1>
+  <span>Separación · CSV · PIMLA</span>
+</header>
+
+<main>
+
+  <!-- MENÚ -->
+  <div class="sidebar">
+    <div class="menu-title">Herramientas</div>
+    <div class="menu">
+      <button onclick="loadApp(this,'separador-nombres.html')">
+        Separador de nombres
+      </button>
+
+      <button onclick="loadApp(this,'generador_csv.html')">
+        Generador CSV
+      </button>
+
+      <button onclick="loadApp(this,'pimla_generador.html')">
+        Generador PIMLA (PDF)
+      </button>
+    </div>
+  </div>
+
+  <!-- CONTENIDO -->
+  <div class="content">
+    <div class="welcome" id="welcome">
+      <h2>Bienvenido</h2>
+      <p>
+        Selecciona una herramienta del menú izquierdo para comenzar a trabajar.
+      </p>
+    </div>
+
+    <iframe id="viewer" style="display:none;"></iframe>
+  </div>
+
+</main>
+
+<script>
+function loadApp(btn, file){
+
+  // activar botón
+  document.querySelectorAll('.menu button')
+    .forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // ocultar bienvenida
+  document.getElementById('welcome').style.display='none';
+
+  // cargar iframe
+  const iframe = document.getElementById('viewer');
+  iframe.style.display='block';
+  iframe.src = file;
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Separador de Nombres Latinoamericanos</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f1e;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e3a5f;
+    --accent: #00d4ff;
+    --accent2: #0099cc;
+    --green: #00e5a0;
+    --amber: #ffb347;
+    --red: #ff6b6b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --highlight: rgba(0, 212, 255, 0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .badge {
+    display: inline-block;
+    background: rgba(0,212,255,0.12);
+    border: 1px solid rgba(0,212,255,0.3);
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 300;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 20px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .card:nth-child(2) { animation-delay: 0.1s; }
+  .card:nth-child(3) { animation-delay: 0.2s; }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .icon-blue { background: rgba(0,212,255,0.15); }
+  .icon-green { background: rgba(0,229,160,0.15); }
+  .icon-amber { background: rgba(255,179,71,0.15); }
+
+  .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.02em;
+  }
+
+  .card-desc {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* Config row */
+  .config-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .config-group {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  select, input[type="text"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: none;
+  }
+
+  select:focus, input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+
+  /* Textarea */
+  .paste-area {
+    width: 100%;
+    min-height: 160px;
+    background: var(--surface2);
+    border: 2px dashed var(--border);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 16px;
+    border-radius: 12px;
+    outline: none;
+    resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    line-height: 1.6;
+  }
+
+  .paste-area:focus {
+    border-color: var(--accent);
+    border-style: solid;
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+  }
+
+  .paste-area::placeholder { color: var(--muted); }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    border-radius: 10px;
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.01em;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0f1e;
+    box-shadow: 0 4px 20px rgba(0,212,255,0.3);
+  }
+
+  .btn-primary:hover {
+    background: #33ddff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(0,212,255,0.4);
+  }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-green {
+    background: var(--green);
+    color: #0a0f1e;
+    box-shadow: 0 4px 20px rgba(0,229,160,0.25);
+  }
+
+  .btn-green:hover {
+    background: #33ebb5;
+    transform: translateY(-1px);
+  }
+
+  .btn-amber {
+    background: transparent;
+    color: var(--amber);
+    border: 1px solid var(--amber);
+  }
+
+  .btn-amber:hover {
+    background: rgba(255,179,71,0.1);
+  }
+
+  .btn:active { transform: scale(0.97); }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 14px 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-top: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .stat { display: flex; align-items: center; gap: 6px; }
+  .stat-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot-total { background: var(--accent); }
+  .dot-ok { background: var(--green); }
+  .dot-review { background: var(--amber); }
+  .stat-val { font-weight: 500; color: var(--text); }
+  .stat-label { color: var(--muted); }
+
+  /* Table */
+  .table-container {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    background: var(--surface2);
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(30,58,95,0.5);
+    transition: background 0.15s;
+  }
+
+  tbody tr:hover { background: var(--highlight); }
+  tbody tr:last-child { border-bottom: none; }
+
+  td {
+    padding: 10px 16px;
+    vertical-align: middle;
+  }
+
+  td:first-child {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    width: 44px;
+  }
+
+  .full-name-cell {
+    color: var(--muted);
+    font-size: 12px;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .name-cell {
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .ap1-cell { color: var(--green); font-weight: 500; }
+  .ap2-cell { color: #a78bfa; font-weight: 500; }
+
+  /* Editable cells */
+  .editable {
+    outline: none;
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: text;
+    min-width: 80px;
+    transition: background 0.15s;
+  }
+
+  .editable:focus {
+    background: var(--surface2);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  /* Confidence badge */
+  .conf-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+  }
+
+  .conf-high { background: rgba(0,229,160,0.15); color: var(--green); border: 1px solid rgba(0,229,160,0.3); }
+  .conf-med  { background: rgba(255,179,71,0.15); color: var(--amber); border: 1px solid rgba(255,179,71,0.3); }
+  .conf-low  { background: rgba(255,107,107,0.15); color: var(--red); border: 1px solid rgba(255,107,107,0.3); }
+
+  /* Actions column */
+  .row-actions { display: flex; gap: 6px; }
+  .row-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Sora', sans-serif;
+  }
+  .row-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+  .empty-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .empty-sub { font-size: 13px; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    z-index: 100;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: var(--green); }
+  .toast.error { border-color: var(--red); }
+
+  /* Tip box */
+  .tip-box {
+    background: rgba(0,212,255,0.05);
+    border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 12px;
+    line-height: 1.6;
+  }
+  .tip-box strong { color: var(--accent); }
+
+  /* Animations */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  .divider { height: 1px; background: var(--border); margin: 6px 0; }
+
+  .order-toggle {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .toggle-opt {
+    flex: 1;
+    padding: 10px 14px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .toggle-opt.active {
+    background: rgba(0,212,255,0.15);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .toggle-opt:not(:last-child) { border-right: 1px solid var(--border); }
+
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="badge">⚡ Utilidad de Nombres</div>
+    <h1>Separador de Nombres<br>Latinoamericanos</h1>
+    <p class="subtitle">Detecta nombres compuestos, apellidos compuestos (De la Cruz, De los Santos) y más</p>
+  </header>
+
+  <!-- Config Card -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon icon-blue">⚙️</div>
+      <div>
+        <div class="card-title">Configuración</div>
+        <div class="card-desc">Indica el orden en que vienen los nombres en tu lista</div>
+      </div>
+    </div>
+
+    <div class="config-row">
+      <div class="config-group">
+        <label>Orden de los datos</label>
+        <div class="order-toggle">
+          <button class="toggle-opt active" data-order="nombre_primero" onclick="setOrder(this)">
+            Nombre → Apellidos
+          </button>
+          <button class="toggle-opt" data-order="apellido_primero" onclick="setOrder(this)">
+            Apellidos → Nombre
+          </button>
+          <button class="toggle-opt" data-order="auto" onclick="setOrder(this)">
+            Auto detectar
+          </button>
+        </div>
+      </div>
+      <div class="config-group">
+        <label>Separador de columnas en CSV</label>
+        <select id="csvSep">
+          <option value=",">Coma  ( , )</option>
+          <option value=";">Punto y coma  ( ; )</option>
+          <option value="\t">Tabulación  ( Tab )</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="tip-box">
+      <strong>Ejemplos soportados:</strong>
+      Juan Ángel Enrique De La Rosa Herrera &nbsp;·&nbsp;
+      De Los Santos García María &nbsp;·&nbsp;
+      PÉREZ VILLAREAL CARLOS &nbsp;·&nbsp;
+      María De La Cruz Mendoza
+    </div>
+  </div>
+
+  <!-- Input Card -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon icon-amber">📋</div>
+      <div>
+        <div class="card-title">Pegar nombres</div>
+        <div class="card-desc">Pega directamente desde Excel (una columna con nombres completos) o escribe uno por línea</div>
+      </div>
+    </div>
+
+    <textarea id="inputArea" class="paste-area"
+      placeholder="Pega aquí tu lista de nombres completos...&#10;&#10;Ejemplos:&#10;Juan Ángel Enrique De La Rosa Herrera&#10;María De Los Santos García&#10;PÉREZ VILLARREAL CARLOS&#10;Ana Sofía Ramírez De La Cruz"></textarea>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="procesarNombres()">⚡ Separar nombres</button>
+      <button class="btn btn-secondary" onclick="limpiarTodo()">🗑 Limpiar</button>
+      <button class="btn btn-secondary" onclick="cargarEjemplos()">📄 Ver ejemplos</button>
+    </div>
+  </div>
+
+  <!-- Results Card -->
+  <div class="card" id="resultsCard" style="display:none">
+    <div class="card-header">
+      <div class="card-icon icon-green">✅</div>
+      <div>
+        <div class="card-title">Resultados</div>
+        <div class="card-desc">Puedes editar cualquier celda haciendo clic sobre ella</div>
+      </div>
+    </div>
+
+    <div class="stats-bar" id="statsBar"></div>
+
+    <div class="btn-row" style="margin-bottom:16px">
+      <button class="btn btn-green" onclick="exportarCSV()">⬇️ Exportar CSV</button>
+      <button class="btn btn-amber" onclick="copiarTabla()">📋 Copiar tabla</button>
+    </div>
+
+    <div class="table-container">
+      <table id="resultTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nombre completo original</th>
+            <th>Nombre(s)</th>
+            <th>1er Apellido</th>
+            <th>2do Apellido</th>
+            <th>Confianza</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span id="toastIcon">✅</span>
+  <span id="toastMsg">Operación exitosa</span>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// DATOS Y ESTADO
+// ─────────────────────────────────────────────
+let ordenActual = 'nombre_primero';
+let resultados = [];
+
+// Prefijos de apellidos compuestos (orden de más largo a más corto)
+const PREFIJOS_APELLIDO = [
+  'de la', 'de los', 'de las', 'del', 'de', 'van den', 'van der', 'van de', 'van',
+  'de lo', 'san', 'santa', 'el', 'la', 'los', 'las', 'al', 'ben'
+];
+
+// Nombres propios comunes para distinguir de apellidos
+const NOMBRES_COMUNES = new Set([
+  'juan','jose','jesus','carlos','miguel','luis','francisco','jorge','antonio',
+  'roberto','rafael','alejandro','daniel','david','gabriel','andres','fernando',
+  'ricardo','eduardo','manuel','pedro','angel','mario','diego','victor','sergio',
+  'pablo','hector','oscar','ivan','hugo','felix','raul','ernesto','arturo',
+  'abraham','abel','adam','adan','adolfo','agustin','alan','alberto','alfredo',
+  'maria','ana','laura','rosa','isabel','patricia','claudia','monica','diana',
+  'alejandra','andrea','daniela','mariana','carolina','gabriela','veronica',
+  'sofia','lucia','elena','martha','norma','beatriz','irene','alicia','leticia',
+  'guadalupe','luz','graciela','lorena','silvia','cristina','adriana','paola',
+  'valeria','natalia','fernanda','amanda','brenda','esperanza','rebeca','cecilia',
+  'ximena','karla','liliana','wendy','karina','marisol','jessica','stephanie',
+  'nancy','gloria','blanca','olivia','esther','consuelo','magdalena','rocio',
+  'angélica','angela','mariela','antonia','roberta','leonor','pilar','remedios',
+  'juan','jose','jesus','marco','mario','marcos','edgar','omar','gerardo',
+  'samuel','benjamin','emilio','rodrigo','santiago','sebastian','fabian','ruben',
+  'cesar','martin','javier','xavier','jaime','armando','enrique','mauricio',
+  'leonel','leonid','gonzalo','ignacio','isidro','isidoro','clemente','damian',
+  'esteban','ethan','evan','ezequiel','ezra','fabiola','felicia','felicitas',
+  'flor','florencia','fransisca','freddy','frederico','geraldine','gianni',
+  'giovanna','gisela','gladys','glenda','gloria','gretchen','griselda','guillermo',
+  'gustavo','heidi','hernan','hiram','horacio','ines','ingrid','irma','ismael',
+  'israel','itzel','itziar','jacinto','jacqueline','janet','janice','jasmin',
+  'jazmin','jenifer','jennifer','jenny','jeremiah','johana','johanna','jonathan',
+  'jordana','jorge','joseluis','joselin','joselyn','josue','juana','judith',
+  'juliana','julio','karen','kevin','kevin','kristian','lara','lena','leobardo',
+  'leticia','lia','lila','liliana','lina','linda','lisandro','lisette','lizeth',
+  'lourdes','luciana','lucio','magdalena','margarita','margoth','marta','mathias',
+  'maximiliano','mayra','melanie','melissa','micaela','minerva','miriam','moises',
+  'miroslava','nadia','nahomi','nayeli','nicolas','nicolas','nidia','nina',
+  'noemí','nohemi','norma','octavio','ofelia','olga','omar','oralia','oswaldo',
+  'ovidio','pamela','perla','petra','ramon','raquel','reina','rene','renata',
+  'rodolfo','rogelio','rolando','romina','rosa','rosalba','rosalia','rosario',
+  'ruben','ruth','sabrina','saira','salma','samantha','sandra','sara','selena',
+  'sendy','sheila','sonia','susana','tamara','tania','teresa','tomas','valentina',
+  'vanessa','yesenia','yolanda','zulema','zuriel'
+]);
+
+// Apellidos que normalmente van solos pero son confundibles con nombres
+const APELLIDOS_COMUNES = new Set([
+  'garcia','gonzalez','rodriguez','lopez','martinez','perez','sanchez','ramirez',
+  'torres','flores','rivera','gomez','diaz','reyes','morales','jimenez','hernandez',
+  'alvarez','romero','vargas','castillo','ruiz','medina','mendez','vega','ramos',
+  'cruz','guerrero','silva','chavez','soto','campos','aguilar','rios','espinoza',
+  'rojas','serrano','molina','luna','herrera','delgado','gutiierrez','gutierrez',
+  'ortega','santos','fuentes','nunez','montes','contreras','cabrera','avila',
+  'carrillo','meza','lara','mora','navarro','barrios','leon','pacheco','paredes',
+  'salinas','santiago','cortez','acosta','villanueva','mendoza','blanco',
+  'maldonado','guzman','vasquez','orozco','miranda','salazar','estrada','espinosa',
+  'cano','pena','ibarra','velasco','dominguez','zamora','suarez','rincon',
+  'iglesias','solano','zepeda','trujillo','solis','rangel','valenzuela','olvera',
+  'uribe','palacios','cisneros','bautista','coronado','pizarro','sandoval',
+  'castellanos','arellano','macias','monroy','ochoa','ambriz','cardona','rosales'
+]);
+
+// ─────────────────────────────────────────────
+// UI helpers
+// ─────────────────────────────────────────────
+function setOrder(btn) {
+  document.querySelectorAll('.toggle-opt').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ordenActual = btn.dataset.order;
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  const icon = type === 'success' ? '✅' : '❌';
+  document.getElementById('toastIcon').textContent = icon;
+  document.getElementById('toastMsg').textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ─────────────────────────────────────────────
+// NORMALIZACIÓN
+// ─────────────────────────────────────────────
+function normalizar(str) {
+  return str.trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z\s]/g, '')
+    .trim();
+}
+
+function titleCase(str) {
+  if (!str) return '';
+  const prefs = ['de', 'la', 'los', 'las', 'del', 'de la', 'de los', 'van', 'van der', 'al'];
+  return str.toLowerCase().split(' ').map((w, i) => {
+    if (i > 0 && prefs.includes(w)) return w;
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }).join(' ');
+}
+
+// ─────────────────────────────────────────────
+// DETECCIÓN DE PREFIJOS
+// ─────────────────────────────────────────────
+function tienePrefijoApeliido(palabras, idx) {
+  const joined = palabras.slice(idx).join(' ').toLowerCase();
+  for (const pref of PREFIJOS_APELLIDO) {
+    if (joined.startsWith(pref + ' ')) return pref.split(' ').length;
+  }
+  return 0;
+}
+
+// Construye apellido agrupando prefijos
+function construirApellido(palabras, inicio) {
+  if (inicio >= palabras.length) return { apellido: '', siguiente: inicio };
+  let i = inicio;
+  let partes = [];
+  // Check si empieza con prefijo
+  const prefLen = tienePrefijoApeliido(palabras, i);
+  if (prefLen > 0 && i + prefLen < palabras.length) {
+    for (let k = 0; k < prefLen; k++) partes.push(palabras[i + k]);
+    i += prefLen;
+    partes.push(palabras[i]);
+    i++;
+  } else {
+    partes.push(palabras[i]);
+    i++;
+  }
+  return { apellido: partes.join(' '), siguiente: i };
+}
+
+// ─────────────────────────────────────────────
+// ALGORITMO PRINCIPAL DE SEPARACIÓN
+// ─────────────────────────────────────────────
+function separarNombre(nombreCompleto, orden) {
+  if (!nombreCompleto || !nombreCompleto.trim()) return null;
+
+  // Normalizar para análisis
+  const norm = normalizar(nombreCompleto);
+  const palabrasNorm = norm.split(' ').filter(Boolean);
+  const palabrasOrig = nombreCompleto.trim().replace(/\s+/g, ' ').split(' ').filter(Boolean);
+
+  if (palabrasNorm.length === 0) return null;
+  if (palabrasNorm.length === 1) {
+    return { nombre: titleCase(palabrasOrig[0]), ap1: '', ap2: '', confianza: 'baja', original: nombreCompleto };
+  }
+
+  let resultado;
+
+  if (orden === 'nombre_primero') {
+    resultado = separarNombrePrimero(palabrasNorm, palabrasOrig);
+  } else if (orden === 'apellido_primero') {
+    resultado = separarApellidoPrimero(palabrasNorm, palabrasOrig);
+  } else {
+    resultado = autoDetectar(palabrasNorm, palabrasOrig);
+  }
+
+  resultado.original = nombreCompleto;
+  resultado.nombre = titleCase(resultado.nombre);
+  resultado.ap1 = titleCase(resultado.ap1);
+  resultado.ap2 = titleCase(resultado.ap2);
+  return resultado;
+}
+
+function separarNombrePrimero(normP, origP) {
+  // Buscar dónde terminan los nombres y empiezan los apellidos
+  // Estrategia: detectar el primer apellido "conocido" o asumir que los últimos 2 tokens son apellidos
+  const n = normP.length;
+
+  if (n === 2) {
+    return { nombre: origP[0], ap1: origP[1], ap2: '', confianza: 'media' };
+  }
+
+  // Buscar índice de inicio de apellidos
+  // El primer apellido puede estar precedido por prefijo
+  let idxApellido = encontrarInicioApellido(normP, 'nombre_primero');
+
+  const { apellido: ap1, siguiente: idx2 } = construirApellido(normP, idxApellido);
+  const { apellido: ap2 } = construirApellido(normP, idx2);
+
+  const nombres = origP.slice(0, idxApellido).join(' ');
+
+  let confianza = 'alta';
+  if (idxApellido <= 0 || idxApellido >= n - 1) confianza = 'baja';
+  else if (idxApellido === 1 && n >= 4) confianza = 'media';
+
+  return { nombre: nombres, ap1: ap1.split(' ').map((w,i)=>i<origP.length?origP[normP.indexOf(w.toUpperCase())]||w:w).join(' ') || ap1,
+           ap2: ap2 || '', confianza };
+}
+
+function separarApellidoPrimero(normP, origP) {
+  const n = normP.length;
+
+  if (n === 2) {
+    return { nombre: origP[1], ap1: origP[0], ap2: '', confianza: 'media' };
+  }
+
+  // Apellidos primero: construir hasta que llegamos a un nombre
+  let idx = 0;
+  const { apellido: ap1, siguiente: idx2 } = construirApellido(normP, idx);
+  const { apellido: ap2, siguiente: idx3 } = construirApellido(normP, idx2);
+
+  const nombres = origP.slice(idx3).join(' ');
+
+  let confianza = 'alta';
+  if (!nombres) confianza = 'baja';
+
+  return { nombre: nombres, ap1, ap2, confianza };
+}
+
+function autoDetectar(normP, origP) {
+  // Heurística: si la primera palabra es un apellido conocido → apellido primero
+  const primera = normP[0].toLowerCase();
+  const ultima = normP[normP.length - 1].toLowerCase();
+
+  const primeraEsApellido = APELLIDOS_COMUNES.has(primera) && !NOMBRES_COMUNES.has(primera);
+  const primeraEsNombre = NOMBRES_COMUNES.has(primera) && !APELLIDOS_COMUNES.has(primera);
+  const ultimaEsApellido = APELLIDOS_COMUNES.has(ultima);
+
+  // Verificar si hay prefijo de apellido al inicio
+  const prefInicio = tienePrefijoApeliido(normP, 0);
+
+  if (prefInicio > 0 || primeraEsApellido) {
+    const res = separarApellidoPrimero(normP, origP);
+    res.confianza = prefInicio > 0 ? 'alta' : (res.confianza === 'alta' ? 'alta' : 'media');
+    return res;
+  }
+
+  if (primeraEsNombre || !ultimaEsApellido) {
+    return separarNombrePrimero(normP, origP);
+  }
+
+  // Asumir nombre primero por defecto
+  return separarNombrePrimero(normP, origP);
+}
+
+function encontrarInicioApellido(normP, modo) {
+  const n = normP.length;
+
+  // Caso especial: 2 palabras
+  if (n === 2) return 1;
+
+  // Buscar primer índice donde hay prefijo de apellido
+  for (let i = 1; i < n; i++) {
+    const prefLen = tienePrefijoApeliido(normP, i);
+    if (prefLen > 0 && i + prefLen < n) {
+      // hay un prefijo aquí, puede ser el inicio del primer apellido
+      // Verificar que las palabras antes sean nombres
+      return i;
+    }
+  }
+
+  // Buscar apellido conocido
+  for (let i = 1; i < n; i++) {
+    const w = normP[i].toLowerCase();
+    if (APELLIDOS_COMUNES.has(w) && !NOMBRES_COMUNES.has(w)) {
+      return i;
+    }
+  }
+
+  // Heurística: para 3 palabras → nombre ap1 ap2, para 4+ → primeros n-2 son nombres
+  if (n === 3) return 1;
+  if (n === 4) return 2;
+  if (n >= 5) return n - 2;
+
+  return Math.ceil(n / 2);
+}
+
+// Reconstruir con mayúsculas originales
+function reconstruirOriginal(normP, origP, idx, hasta) {
+  return origP.slice(idx, hasta).join(' ');
+}
+
+// ─────────────────────────────────────────────
+// PROCESAR LISTA
+// ─────────────────────────────────────────────
+function procesarNombres() {
+  const raw = document.getElementById('inputArea').value.trim();
+  if (!raw) { showToast('Pega o escribe nombres primero', 'error'); return; }
+
+  const lineas = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  resultados = [];
+
+  lineas.forEach((linea, i) => {
+    // Puede venir de Excel con tabulaciones (varios campos en una línea → tomar el primero)
+    const partes = linea.split(/\t/);
+    const nombre = partes[0].trim();
+    if (!nombre) return;
+
+    const r = separarNombre(nombre, ordenActual);
+    if (r) resultados.push({ ...r, idx: resultados.length + 1 });
+  });
+
+  if (resultados.length === 0) { showToast('No se encontraron nombres válidos', 'error'); return; }
+
+  renderTabla();
+  document.getElementById('resultsCard').style.display = 'block';
+  document.getElementById('resultsCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  showToast(`${resultados.length} nombre${resultados.length > 1 ? 's' : ''} procesado${resultados.length > 1 ? 's' : ''}`);
+}
+
+function renderTabla() {
+  const tbody = document.getElementById('resultBody');
+  tbody.innerHTML = '';
+
+  const total = resultados.length;
+  const altos = resultados.filter(r => r.confianza === 'alta').length;
+  const medios = resultados.filter(r => r.confianza === 'media').length;
+  const bajos = resultados.filter(r => r.confianza === 'baja').length;
+
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat"><div class="stat-dot dot-total"></div><span class="stat-val">${total}</span><span class="stat-label">total</span></div>
+    <div class="stat"><div class="stat-dot dot-ok"></div><span class="stat-val">${altos}</span><span class="stat-label">confianza alta</span></div>
+    <div class="stat"><div class="stat-dot dot-review"></div><span class="stat-val">${medios + bajos}</span><span class="stat-label">revisar</span></div>
+  `;
+
+  resultados.forEach((r, i) => {
+    const confClass = r.confianza === 'alta' ? 'conf-high' : r.confianza === 'media' ? 'conf-med' : 'conf-low';
+    const confLabel = r.confianza === 'alta' ? '● ALTA' : r.confianza === 'media' ? '◐ MEDIA' : '○ BAJA';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.idx}</td>
+      <td><div class="full-name-cell" title="${r.original}">${r.original}</div></td>
+      <td class="name-cell"><span class="editable" contenteditable="true" data-field="nombre" data-idx="${i}">${r.nombre}</span></td>
+      <td class="ap1-cell"><span class="editable" contenteditable="true" data-field="ap1" data-idx="${i}">${r.ap1}</span></td>
+      <td class="ap2-cell"><span class="editable" contenteditable="true" data-field="ap2" data-idx="${i}">${r.ap2}</span></td>
+      <td><span class="conf-badge ${confClass}">${confLabel}</span></td>
+      <td><div class="row-actions">
+        <button class="row-btn" onclick="eliminarFila(${i})">✕</button>
+      </div></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Sync edits
+  tbody.querySelectorAll('[contenteditable]').forEach(el => {
+    el.addEventListener('blur', () => {
+      const idx = parseInt(el.dataset.idx);
+      const field = el.dataset.field;
+      resultados[idx][field] = el.textContent.trim();
+    });
+  });
+}
+
+function eliminarFila(i) {
+  resultados.splice(i, 1);
+  resultados.forEach((r, j) => r.idx = j + 1);
+  renderTabla();
+}
+
+// ─────────────────────────────────────────────
+// EXPORTAR
+// ─────────────────────────────────────────────
+function exportarCSV() {
+  if (resultados.length === 0) { showToast('No hay datos para exportar', 'error'); return; }
+  const sep = document.getElementById('csvSep').value.replace('\\t', '\t');
+  const esc = v => `"${(v || '').replace(/"/g, '""')}"`;
+
+  const header = ['Nombre(s)', '1er Apellido', '2do Apellido', 'Nombre Completo Original'].map(esc).join(sep);
+  const rows = resultados.map(r =>
+    [r.nombre, r.ap1, r.ap2, r.original].map(esc).join(sep)
+  );
+
+  const csv = '\uFEFF' + [header, ...rows].join('\r\n'); // BOM para Excel
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'nombres_separados.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`CSV exportado (${resultados.length} registros)`);
+}
+
+function copiarTabla() {
+  const sep = '\t';
+  const header = ['Nombre(s)', '1er Apellido', '2do Apellido'].join(sep);
+  const rows = resultados.map(r => [r.nombre, r.ap1, r.ap2].join(sep));
+  const texto = [header, ...rows].join('\n');
+  navigator.clipboard.writeText(texto).then(() => showToast('Tabla copiada (compatible con Excel)'));
+}
+
+function limpiarTodo() {
+  document.getElementById('inputArea').value = '';
+  document.getElementById('resultsCard').style.display = 'none';
+  resultados = [];
+}
+
+function cargarEjemplos() {
+  document.getElementById('inputArea').value = `Juan Ángel Enrique De La Rosa Herrera
+María De Los Santos García Mendoza
+PÉREZ VILLARREAL CARLOS ALBERTO
+Ana Sofía Ramírez De La Cruz
+José Luis García López
+Guadalupe Hernández De La Torre
+MARTÍNEZ CORONA ROBERTO
+De Los Reyes Sánchez Patricia Alejandra
+Miguel Ángel Gutiérrez Ibarra
+Carmen Lucía Del Río Castillo
+SÁNCHEZ DE LA VEGA ERNESTO
+Valentina Espinoza Morales`;
+  showToast('Ejemplos cargados');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PIMLA — Generador de Hojas de Respuestas</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;700&display=swap');
+:root{--red:#C10000;--dark:#111;--mid:#444;--light:#F4F4F0;--border:#D0D0D0;--card:#FFF;--green:#005C2E}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--light);color:var(--dark);min-height:100vh}
+header{background:var(--dark);color:#fff;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:56px;border-bottom:3px solid var(--red);position:sticky;top:0;z-index:10}
+header h1{font-family:'IBM Plex Mono',monospace;font-size:.88rem;letter-spacing:.07em;font-weight:700}
+header span{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:#FF4444;letter-spacing:.12em}
+.container{max-width:960px;margin:1.8rem auto;padding:0 1.2rem;display:grid;gap:1.1rem}
+.card{background:var(--card);border:1.5px solid var(--border);padding:1.4rem 1.6rem}
+.card-title{font-family:'IBM Plex Mono',monospace;font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--red);margin-bottom:.9rem;padding-bottom:.5rem;border-bottom:1px solid #E8E8E8}
+
+/* ── DROPZONE CSV ── */
+.dropzone{border:2px dashed #CCC;padding:1.6rem;text-align:center;cursor:pointer;transition:.18s;position:relative;background:#FAFAFA}
+.dropzone:hover,.dropzone.over{border-color:var(--red);background:#FFF5F5}
+.dropzone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.dropzone-ico{font-size:1.9rem;display:block;margin-bottom:.35rem}
+.dropzone p{font-size:.8rem;color:var(--mid)}
+.dropzone strong{color:var(--red)}
+
+/* ── DROPZONE IMAGEN ── */
+.img-dz{border:2px dashed #BBB;padding:1.4rem;text-align:center;cursor:pointer;transition:.18s;position:relative;background:#FAFAFA;border-radius:2px}
+.img-dz:hover,.img-dz.over{border-color:var(--red);background:#FFF5F5}
+.img-dz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.img-dz-ico{font-size:2.2rem;display:block;margin-bottom:.3rem}
+.img-dz p{font-size:.8rem;color:var(--mid);margin:.15rem 0}
+.img-dz .sub{font-size:.68rem;color:#aaa}
+.img-dz strong{color:var(--red)}
+
+/* ── PREVIEW IMAGEN ── */
+.img-prev{display:none;margin-top:1rem;gap:1.1rem;align-items:flex-start;flex-wrap:wrap}
+.img-prev.visible{display:flex}
+.img-thumb{width:88px;height:114px;object-fit:cover;border:1px solid var(--border);background:#EEE;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.img-meta{font-family:'IBM Plex Mono',monospace;font-size:.69rem;color:var(--mid);line-height:1.85;flex:1;min-width:160px}
+.img-meta strong{color:var(--dark);display:block;margin-bottom:.2rem;font-size:.75rem}
+.img-meta .note-bg{font-size:.64rem;color:#777;margin-top:.5rem;line-height:1.7}
+.btn-rm{font-family:'IBM Plex Mono',monospace;font-size:.63rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;background:transparent;border:1.5px solid var(--red);color:var(--red);padding:.3rem .75rem;cursor:pointer;margin-top:.65rem;transition:.14s;display:inline-block}
+.btn-rm:hover{background:var(--red);color:#fff}
+
+/* ── BADGE ESTADO IMAGEN ── */
+.badge-ok{display:inline-flex;align-items:center;gap:.45rem;background:#E8F5EE;border:1px solid #B0DDBB;color:var(--green);font-family:'IBM Plex Mono',monospace;font-size:.67rem;padding:.32rem .75rem;margin-top:.85rem}
+.badge-no{display:inline-flex;align-items:center;gap:.45rem;background:#F5F5F2;border:1px solid #CCC;color:#888;font-family:'IBM Plex Mono',monospace;font-size:.67rem;padding:.32rem .75rem;margin-top:.85rem}
+
+/* ── HINT ── */
+.hint{background:#F7F7F4;border-left:3px solid var(--red);padding:.8rem 1rem;font-family:'IBM Plex Mono',monospace;font-size:.69rem;color:var(--mid);line-height:1.95;margin-top:.7rem}
+.hint strong{color:var(--dark)}.hint code{background:#EBEBEB;padding:.05rem .3rem;border-radius:2px}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow:auto;max-height:280px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:.74rem}
+thead th{background:var(--dark);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;padding:.48rem .72rem;text-align:left;position:sticky;top:0;white-space:nowrap}
+tbody tr:nth-child(even){background:#F8F8F6}tbody tr:hover{background:#FFF0F0}
+tbody td{padding:.42rem .72rem;border-bottom:1px solid #EEE;font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--mid);white-space:nowrap}
+.tag{display:inline-block;padding:.08rem .38rem;background:var(--dark);color:#fff;font-size:.58rem;font-family:'IBM Plex Mono',monospace}
+
+/* ── STATS ── */
+.stats{display:flex;gap:.8rem;margin-bottom:.9rem;flex-wrap:wrap}
+.stat{background:#F7F7F4;border:1px solid var(--border);padding:.5rem .85rem;display:flex;flex-direction:column;gap:.07rem}
+.stat-v{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:1.2rem;color:var(--red)}
+.stat-l{font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;color:#999}
+
+/* ── CONTROLS ── */
+.controls{display:flex;gap:.7rem;align-items:center;flex-wrap:wrap}
+.btn{font-family:'IBM Plex Mono',monospace;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border:2px solid transparent;padding:.52rem 1.05rem;cursor:pointer;transition:.14s;display:inline-flex;align-items:center;gap:.38rem}
+.btn-red{background:var(--red);color:#fff;border-color:var(--red)}.btn-red:hover{background:#8B0000;border-color:#8B0000}
+.btn-out{background:transparent;color:var(--dark);border-color:var(--dark)}.btn-out:hover{background:var(--dark);color:#fff}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.status{font-family:'IBM Plex Mono',monospace;font-size:.68rem;padding:.4rem .8rem;flex:1;min-width:160px}
+.s-ok{background:#E6F4EE;color:var(--green);border:1px solid #B0DDBB}
+.s-err{background:#FFECEC;color:var(--red);border:1px solid #FFBBBB}
+.s-info{background:#EEEEFF;color:#1A2ACC;border:1px solid #BBBBFF}
+.prog-wrap{background:#E5E5E2;height:4px;overflow:hidden;margin-top:.7rem;display:none}
+.prog-bar{height:100%;background:var(--red);width:0%;transition:width .2s}
+.prog-lbl{font-family:'IBM Plex Mono',monospace;font-size:.66rem;color:#888;margin-top:.32rem}
+.note{font-size:.7rem;color:#999;font-family:'IBM Plex Mono',monospace;margin-top:.75rem;line-height:1.65}
+.note strong{color:var(--dark)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PIMLA — Generador de Hojas de Respuestas</h1>
+  <span>Programa Integral de Monitoreo · SEP</span>
+</header>
+
+<div class="container">
+
+  <!-- ════ PASO 1: CSV ════ -->
+  <div class="card">
+    <div class="card-title">① Cargar Base de Datos CSV</div>
+    <div class="dropzone" id="dz">
+      <input type="file" id="csvIn" accept=".csv">
+      <span class="dropzone-ico">📋</span>
+      <p>Arrastra tu <strong>.csv</strong> aquí o haz clic para seleccionar</p>
+    </div>
+    <div class="hint">
+      <strong>Columnas requeridas (primera fila = encabezado, separadas por coma):</strong><br>
+      <code>NOMBRES, PRIMER_APELLIDO, SEGUNDO_APELLIDO, ASIGNACION, GRUPO</code><br><br>
+      • <strong>NOMBRES</strong> — Nombre(s). Acepta: <code>á é í ó ú ü ñ Á É Í Ó Ú Ü Ñ</code><br>
+      • <strong>PRIMER_APELLIDO</strong> — 1er apellido<br>
+      • <strong>SEGUNDO_APELLIDO</strong> — 2do apellido<br>
+      • <strong>ASIGNACION</strong> — 9 dígitos numéricos (ej: <code>000404201</code>)<br>
+      • <strong>GRUPO</strong> — Una letra A–J<br><br>
+      Guardar como <strong>CSV UTF-8</strong> (Excel: Guardar como → CSV UTF-8)
+    </div>
+  </div>
+
+  <!-- ════ PASO 2: IMAGEN DE FONDO ════ -->
+  <div class="card">
+    <div class="card-title">② Imagen de Fondo — Hoja Preimpresa <span style="font-weight:400;color:#aaa;text-transform:none;letter-spacing:0">(opcional)</span></div>
+
+    <!-- Zona de carga -->
+    <div class="img-dz" id="imgDz">
+      <input type="file" id="imgIn" accept="image/png,image/jpeg,image/jpg,image/webp">
+      <span class="img-dz-ico">🖼️</span>
+      <p>Arrastra la imagen de la hoja PIMLA aquí o <strong>haz clic para seleccionar</strong></p>
+      <p class="sub">PNG · JPG · WEBP — se coloca a tamaño carta completo en todas las páginas</p>
+    </div>
+
+    <!-- Vista previa (oculta hasta que se cargue imagen) -->
+    <div class="img-prev" id="imgPrev">
+      <img id="imgThumb" class="img-thumb" src="" alt="Vista previa de la hoja">
+      <div class="img-meta">
+        <strong id="imgName">—</strong>
+        Tamaño: <span id="imgSize">—</span><br>
+        Resolución: <span id="imgDims">—</span><br>
+        Formato PDF: <span id="imgFmt">—</span>
+        <p class="note-bg">
+          ✔ La imagen se insertará como fondo en <strong>cada página</strong> del PDF.<br>
+          ✔ Ocupa el <strong>100%</strong> de la hoja carta (215.9 × 279.4 mm).<br>
+          ✔ Queda <strong>detrás</strong> de nombres, asignación y círculos.
+        </p>
+        <button class="btn-rm" onclick="removeImage()">✕ Quitar imagen</button>
+      </div>
+    </div>
+
+    <!-- Badge de estado -->
+    <div id="imgBadge">
+      <span class="badge-no">⬜ Sin imagen de fondo — el PDF tendrá fondo en blanco</span>
+    </div>
+  </div>
+
+  <!-- ════ PASO 3: VISTA PREVIA CSV ════ -->
+  <div class="card" id="prevCard" style="display:none">
+    <div class="card-title">③ Vista Previa de Datos</div>
+    <div class="stats" id="statRow"></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Nombres</th><th>1er Apellido</th><th>2do Apellido</th><th>Asignación</th><th>Grupo</th></tr></thead>
+        <tbody id="tBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════ PASO 4: GENERAR ════ -->
+  <div class="card">
+    <div class="card-title">④ Generar PDF</div>
+    <div class="controls">
+      <button class="btn btn-red" id="btnP" disabled onclick="run('print')">🖨 Generar e Imprimir</button>
+      <button class="btn btn-out" id="btnD" disabled onclick="run('download')">⬇ Descargar PDF</button>
+      <div class="status s-info" id="statusEl">Carga un archivo CSV para comenzar.</div>
+    </div>
+    <div class="prog-wrap" id="progWrap"><div class="prog-bar" id="progBar"></div></div>
+    <p class="prog-lbl" id="progLbl"></p>
+    <p class="note">
+      ⚠ Imprimir con escala <strong>100%</strong>, sin ajuste de márgenes, papel <strong>Carta</strong>.<br>
+      Si se cargó imagen de fondo, aparecerá detrás de los datos en <strong>todas</strong> las páginas.
+    </p>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  COORDENADAS — calibradas con PyMuPDF + análisis pixel hoja PIMLA
+//  Página carta: 215.90 × 279.40 mm
+// ════════════════════════════════════════════════════════════════
+const CAL = {
+  // Textos encabezado
+  nombres:         { x: 50.774,  y: 24.194, maxW: 57.0, fs: 12 },
+  primerApellido:  { x: 109.651, y: 24.194, maxW: 43.0, fs: 12 },
+  segundoApellido: { x: 154.808, y: 24.194, maxW: 43.0, fs: 12 },
+
+  // Asignación — dígitos (texto centrado en cada celda)
+  asigCentersX: [47.865, 53.713, 59.660, 65.770, 71.316, 77.153, 83.044, 88.836, 94.682],
+  asigTextY:    38.136,
+  asigFS:       10,
+
+  // Grupo — letra
+  grupoX:       107.198,
+  grupoTextY:   37.981,
+  grupoFS:      10,
+
+  // Cuadrícula dígitos — centros Y filas 0-9 (medidos del jpg original PIMLA)
+  digitRowsY:   [42.5, 49, 55.5, 62.3, 68.5, 75.5, 82, 88.5, 95.3, 102],
+  digitCircleR: 2.37,
+
+  // Cuadrícula grupo — mismas Y, columna propia
+  grupoCircleX: 108.009,
+  grupoLetters: 'ABCDEFGHIJ',
+};
+
+const PAGE_W = 215.9;  // mm — carta
+const PAGE_H = 279.4;  // mm — carta
+
+// ════════════════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ════════════════════════════════════════════════════════════════
+let csvData   = [];    // filas del CSV
+let pdfBlob   = null;  // último PDF generado
+let bgDataUrl = null;  // data-URL de la imagen de fondo
+let bgFmt     = null;  // 'JPEG' | 'PNG'
+
+// ════════════════════════════════════════════════════════════════
+//  CSV — DRAG & DROP / SELECT
+// ════════════════════════════════════════════════════════════════
+const dz = document.getElementById('dz');
+document.getElementById('csvIn').addEventListener('change', e => {
+  const f = e.target.files[0]; if (f) readCSV(f);
+});
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.toLowerCase().endsWith('.csv')) readCSV(f);
+  else setStatus('Solo archivos .csv', 'err');
+});
+
+function readCSV(file) {
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      csvData = parseCSV(ev.target.result);
+      if (!csvData.length) throw new Error('Sin registros válidos.');
+      renderTable();
+      pdfBlob = null;
+      document.getElementById('btnP').disabled = false;
+      document.getElementById('btnD').disabled = false;
+      setStatus(`✓ ${csvData.length} alumno(s) cargados.`, 'ok');
+    } catch(e) { setStatus('Error: ' + e.message, 'err'); }
+  };
+  r.readAsText(file, 'UTF-8');
+}
+
+function parseCSV(raw) {
+  raw = raw.replace(/^\uFEFF/, '');
+  const lines = raw.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) throw new Error('Encabezado + al menos un registro requeridos.');
+  const headers = parseLine(lines[0]).map(h => h.trim().toUpperCase().replace(/\s+/g,'_'));
+  const req = ['NOMBRES','PRIMER_APELLIDO','SEGUNDO_APELLIDO','ASIGNACION','GRUPO'];
+  const miss = req.filter(r => !headers.includes(r));
+  if (miss.length) throw new Error(`Columnas faltantes: ${miss.join(', ')}`);
+  return lines.slice(1).map(line => {
+    const vals = parseLine(line);
+    const row = {};
+    headers.forEach((h,i) => { row[h] = (vals[i]||'').trim(); });
+    if (row.GRUPO)      row.GRUPO = row.GRUPO[0].toUpperCase();
+    if (row.ASIGNACION) row.ASIGNACION = row.ASIGNACION.replace(/\D/g,'').slice(0,9);
+    return row;
+  }).filter(r => r.NOMBRES || r.PRIMER_APELLIDO);
+}
+
+function parseLine(line) {
+  const res=[]; let cur='', inQ=false;
+  for(const ch of line){
+    if(ch==='"'){inQ=!inQ;continue;}
+    if(ch===','&&!inQ){res.push(cur);cur='';continue;}
+    cur+=ch;
+  }
+  res.push(cur); return res;
+}
+
+function renderTable() {
+  document.getElementById('prevCard').style.display = 'block';
+  const gs = [...new Set(csvData.map(d=>d.GRUPO).filter(Boolean))].sort().join(' ');
+  document.getElementById('statRow').innerHTML = `
+    <div class="stat"><span class="stat-v">${csvData.length}</span><span class="stat-l">Alumnos</span></div>
+    <div class="stat"><span class="stat-v">${gs||'—'}</span><span class="stat-l">Grupos</span></div>
+    <div class="stat"><span class="stat-v">${csvData.length}</span><span class="stat-l">Páginas PDF</span></div>`;
+  document.getElementById('tBody').innerHTML = csvData.map((r,i) => `
+    <tr><td>${i+1}</td><td>${r.NOMBRES||'—'}</td><td>${r.PRIMER_APELLIDO||'—'}</td>
+    <td>${r.SEGUNDO_APELLIDO||'—'}</td>
+    <td><span class="tag">${r.ASIGNACION||'—'}</span></td>
+    <td><span class="tag">${r.GRUPO||'—'}</span></td></tr>`).join('');
+}
+
+// ════════════════════════════════════════════════════════════════
+//  IMAGEN DE FONDO — DRAG & DROP / SELECT
+// ════════════════════════════════════════════════════════════════
+const imgDz = document.getElementById('imgDz');
+document.getElementById('imgIn').addEventListener('change', e => {
+  const f = e.target.files[0]; if (f) loadBgImage(f);
+});
+imgDz.addEventListener('dragover', e => { e.preventDefault(); imgDz.classList.add('over'); });
+imgDz.addEventListener('dragleave', () => imgDz.classList.remove('over'));
+imgDz.addEventListener('drop', e => {
+  e.preventDefault(); imgDz.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadBgImage(f);
+  else alert('Selecciona una imagen: PNG, JPG o WEBP.');
+});
+
+function loadBgImage(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const rawUrl = ev.target.result;
+    const mime   = file.type.toLowerCase();
+
+    if (mime.includes('png')) {
+      bgFmt     = 'PNG';
+      bgDataUrl = rawUrl;
+      finalizeBg(file, rawUrl);
+    } else if (mime.includes('jpeg') || mime.includes('jpg')) {
+      bgFmt     = 'JPEG';
+      bgDataUrl = rawUrl;
+      finalizeBg(file, rawUrl);
+    } else {
+      // WEBP u otro formato no soportado por jsPDF → convertir a JPEG via canvas
+      bgFmt = 'JPEG';
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        bgDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        finalizeBg(file, rawUrl);  // usar rawUrl para la miniatura
+      };
+      img.src = rawUrl;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function finalizeBg(file, previewUrl) {
+  // Miniatura
+  document.getElementById('imgThumb').src = previewUrl;
+
+  // Nombre y tamaño
+  document.getElementById('imgName').textContent = file.name;
+  document.getElementById('imgSize').textContent = fmtBytes(file.size);
+  document.getElementById('imgFmt').textContent  = bgFmt;
+
+  // Dimensiones reales
+  const tmp = new Image();
+  tmp.onload = () => {
+    document.getElementById('imgDims').textContent = `${tmp.naturalWidth} × ${tmp.naturalHeight} px`;
+  };
+  tmp.src = previewUrl;
+
+  // UI
+  imgDz.style.display = 'none';
+  document.getElementById('imgPrev').classList.add('visible');
+  document.getElementById('imgBadge').innerHTML =
+    `<span class="badge-ok">🖼️ Imagen de fondo activa: <strong style="margin-left:.2rem">${file.name}</strong></span>`;
+
+  pdfBlob = null;
+}
+
+function removeImage() {
+  bgDataUrl = null;
+  bgFmt     = null;
+  document.getElementById('imgIn').value = '';
+  document.getElementById('imgThumb').src = '';
+  imgDz.style.display = '';
+  document.getElementById('imgPrev').classList.remove('visible');
+  document.getElementById('imgBadge').innerHTML =
+    `<span class="badge-no">⬜ Sin imagen de fondo — el PDF tendrá fondo en blanco</span>`;
+  pdfBlob = null;
+}
+
+function fmtBytes(b) {
+  if (b < 1024)       return b + ' B';
+  if (b < 1024*1024)  return (b/1024).toFixed(1) + ' KB';
+  return (b/(1024*1024)).toFixed(2) + ' MB';
+}
+
+// ════════════════════════════════════════════════════════════════
+//  GENERADOR PDF
+// ════════════════════════════════════════════════════════════════
+async function run(mode) {
+  if (!csvData.length) return;
+  const bP = document.getElementById('btnP'), bD = document.getElementById('btnD');
+  bP.disabled = true; bD.disabled = true;
+  document.getElementById('progWrap').style.display = 'block';
+  setStatus('Generando PDF...', 'info');
+
+  try {
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit:        'mm',
+      format:      'letter',
+      putOnlyUsedFonts: true,
+      compress:    false,
+    });
+
+    for (let i = 0; i < csvData.length; i++) {
+      if (i > 0) doc.addPage();
+      drawPage(doc, csvData[i]);
+      document.getElementById('progBar').style.width = Math.round((i+1)/csvData.length*100) + '%';
+      document.getElementById('progLbl').textContent = `Procesando ${i+1} de ${csvData.length}...`;
+      await tick();
+    }
+
+    pdfBlob = doc.output('blob');
+    document.getElementById('progLbl').textContent = `✓ ${csvData.length} hoja(s) listas.`;
+    setStatus(`✓ PDF listo — ${csvData.length} página(s).`, 'ok');
+
+    const url = URL.createObjectURL(pdfBlob);
+    if (mode === 'print') {
+      const w = window.open(url, '_blank');
+      if (!w) alert('Permite ventanas emergentes para abrir el PDF.');
+    } else {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `PIMLA_${csvData.length}_alumnos.pdf`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+  } catch(e) {
+    setStatus('Error: ' + e.message, 'err');
+    console.error(e);
+  }
+  bP.disabled = false; bD.disabled = false;
+}
+
+const tick = () => new Promise(r => setTimeout(r, 0));
+
+// ────────────────────────────────────────────────────────────────
+//  DIBUJAR UNA PÁGINA
+//  Orden de capas:
+//    1. Imagen de fondo (z más bajo — toda la página)
+//    2. Texto (nombres, apellidos, dígitos, grupo)
+//    3. Círculos negros (z más alto)
+// ────────────────────────────────────────────────────────────────
+function drawPage(doc, row) {
+  const C = CAL;
+
+  // ── CAPA 1: IMAGEN DE FONDO ────────────────────────────────────
+  // Se dibuja primero para que quede detrás de todo lo demás.
+  // addImage(imageData, format, x, y, width, height)
+  // x=0, y=0 → esquina superior izquierda de la página
+  // width=PAGE_W, height=PAGE_H → cubre la hoja carta completa al 100%
+  if (bgDataUrl) {
+    doc.addImage(bgDataUrl, bgFmt, 0, 0, PAGE_W, PAGE_H);
+  }
+
+  // ── CAPA 2: TEXTO ──────────────────────────────────────────────
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
+
+  const nombres = fixText(row.NOMBRES || '');
+  const ap1     = fixText(row.PRIMER_APELLIDO || '');
+  const ap2     = fixText(row.SEGUNDO_APELLIDO || '');
+  const asig    = (row.ASIGNACION || '').padEnd(9, '');
+  const grupo   = ((row.GRUPO || '')[0] || '').toUpperCase();
+
+  // Nombres
+  doc.setFontSize(autoFS(doc, nombres, C.nombres.maxW, C.nombres.fs));
+  doc.text(nombres, C.nombres.x, C.nombres.y);
+
+  // 1er Apellido
+  doc.setFontSize(autoFS(doc, ap1, C.primerApellido.maxW, C.primerApellido.fs));
+  doc.text(ap1, C.primerApellido.x, C.primerApellido.y);
+
+  // 2do Apellido
+  doc.setFontSize(autoFS(doc, ap2, C.segundoApellido.maxW, C.segundoApellido.fs));
+  doc.text(ap2, C.segundoApellido.x, C.segundoApellido.y);
+
+  // Dígitos de asignación — fila superior de la cuadrícula
+  doc.setFontSize(C.asigFS);
+  for (let d = 0; d < 9; d++) {
+    const digit = asig[d] || '';
+    if (digit.trim()) doc.text(digit, C.asigCentersX[d], C.asigTextY, { align: 'center' });
+  }
+
+  // Letra de grupo
+  doc.setFontSize(C.grupoFS);
+  if (grupo) doc.text(grupo, C.grupoX, C.grupoTextY, { align: 'center' });
+
+  // ── CAPA 3: CÍRCULOS NEGROS RELLENOS ───────────────────────────
+  doc.setFillColor(0, 0, 0);
+
+  // Cuadrícula de asignación: cada columna marca la fila del dígito
+  for (let col = 0; col < 9; col++) {
+    const d = parseInt(asig[col]);
+    if (isNaN(d)) continue;
+    doc.circle(C.asigCentersX[col], C.digitRowsY[d], C.digitCircleR, 'F');
+  }
+
+  // Nota: el círculo de grupo se omite intencionalmente.
+  // El grupo ya queda registrado con la letra en el recuadro superior.
+}
+
+// ════════════════════════════════════════════════════════════════
+//  UTILIDADES
+// ════════════════════════════════════════════════════════════════
+function fixText(s) {
+  return s ? s.trim().normalize('NFC') : '';
+}
+
+function autoFS(doc, text, maxW, baseFS) {
+  if (!text) return baseFS;
+  let fs = baseFS;
+  doc.setFontSize(fs);
+  while (fs > 5 && doc.getTextWidth(text) > maxW) { fs -= 0.3; doc.setFontSize(fs); }
+  return fs;
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('statusEl');
+  el.textContent = msg;
+  el.className = 'status ' + { ok: 's-ok', err: 's-err', info: 's-info' }[type];
+}
+</script>
+</body>
+</html>
