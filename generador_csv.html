@@ -7,23 +7,13 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 :root {
-  --blue-800: #0C447C;
-  --blue-600: #185FA5;
-  --blue-400: #378ADD;
-  --blue-200: #85B7EB;
-  --blue-100: #B5D4F4;
-  --gray-900: #1a1d23;
-  --gray-800: #23272f;
-  --gray-700: #2e3340;
-  --gray-400: #6b7280;
-  --gray-200: #c8cdd6;
-  --white: #ffffff;
-  --radius-sm: 6px;
-  --radius-lg: 16px;
+  --blue-800: #0C447C; --blue-600: #185FA5; --blue-400: #378ADD;
+  --blue-200: #85B7EB; --blue-100: #B5D4F4;
+  --gray-900: #1a1d23; --gray-800: #23272f; --gray-700: #2e3340;
+  --gray-400: #6b7280; --gray-200: #c8cdd6; --white: #ffffff;
+  --radius-sm: 6px; --radius-lg: 16px;
 }
-
 html, body { height: 100%; font-family: 'Sora', sans-serif; background: var(--gray-900); color: var(--white); -webkit-font-smoothing: antialiased; }
 body { display: flex; flex-direction: column; min-height: 100vh; }
 
@@ -54,11 +44,13 @@ header { background: var(--gray-800); border-bottom: 1px solid rgba(255,255,255,
 .btn-danger:hover { background: rgba(163,45,45,0.15); }
 .btn-primary { background: var(--blue-600); border-color: var(--blue-600); color: #fff; }
 .btn-primary:hover { background: var(--blue-800); border-color: var(--blue-800); }
+.btn-primary:active { transform: scale(0.98); }
 
 /* PASTE HINT */
-.paste-hint { display: flex; align-items: center; gap: 9px; padding: 7px 28px; background: rgba(55,138,221,0.07); border-bottom: 1px solid rgba(55,138,221,0.15); font-size: 12px; color: var(--blue-200); flex-shrink: 0; }
+.paste-hint { display: flex; align-items: center; gap: 9px; padding: 7px 28px; background: rgba(55,138,221,0.07); border-bottom: 1px solid rgba(55,138,221,0.15); font-size: 12px; color: var(--blue-200); flex-shrink: 0; flex-wrap: wrap; gap: 6px; }
 .paste-hint svg { width: 13px; height: 13px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .paste-hint kbd { display: inline-flex; align-items: center; background: rgba(55,138,221,0.2); border: 1px solid rgba(55,138,221,0.35); border-radius: 4px; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--blue-100); padding: 1px 7px; }
+.hint-sep { color: rgba(255,255,255,0.2); }
 
 /* MAIN */
 main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -78,8 +70,11 @@ th:nth-child(6) { width: 9%; }
 th:last-child   { width: 42px; border-right: none; }
 tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.07s; }
 tbody tr:hover { background: rgba(255,255,255,0.03); }
+tbody tr.paste-hi { background: rgba(55,138,221,0.1) !important; }
+tbody tr.paste-new { background: rgba(59,109,17,0.1) !important; }
 td { padding: 0; border-right: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
 td:last-child { border-right: none; }
+td.paste-cell { box-shadow: inset 0 0 0 1px rgba(55,138,221,0.5); }
 .row-num { text-align: center; font-size: 11px; font-family: 'DM Mono', monospace; color: rgba(255,255,255,0.2); padding: 0 4px; user-select: none; }
 td input { width: 100%; padding: 9px 12px; background: transparent; border: none; outline: none; font-family: 'Sora', sans-serif; font-size: 13px; color: var(--white); caret-color: var(--blue-400); }
 td input::placeholder { color: rgba(255,255,255,0.17); font-size: 12px; }
@@ -110,44 +105,77 @@ footer { background: var(--gray-800); border-top: 1px solid rgba(255,255,255,0.0
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* PASTE OVERLAY */
-.paste-overlay { display: none; position: fixed; inset: 0; z-index: 500; background: rgba(10,18,30,0.8); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
+.paste-overlay { display: none; position: fixed; inset: 0; z-index: 500; background: rgba(10,18,30,0.82); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
 .paste-overlay.active { display: flex; }
-.paste-overlay-box { border: 2px dashed var(--blue-400); border-radius: var(--radius-lg); padding: 48px 64px; text-align: center; animation: popIn 0.2s cubic-bezier(0.34,1.56,0.64,1); }
+.paste-overlay-box { border: 2px dashed var(--blue-400); border-radius: var(--radius-lg); padding: 44px 60px; text-align: center; animation: popIn 0.2s cubic-bezier(0.34,1.56,0.64,1); }
 @keyframes popIn { from{transform:scale(.92);opacity:0} to{transform:scale(1);opacity:1} }
-.paste-overlay-icon { font-size: 38px; margin-bottom: 10px; }
-.paste-overlay-title { font-size: 17px; font-weight: 600; margin-bottom: 5px; }
-.paste-overlay-sub { font-size: 13px; color: var(--gray-400); }
+.paste-overlay-icon { font-size: 36px; margin-bottom: 10px; }
+.paste-overlay-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.paste-overlay-sub { font-size: 12px; color: var(--gray-400); }
 
 /* MODAL */
-.modal-bg { display: none; position: fixed; inset: 0; z-index: 600; background: rgba(10,18,30,0.85); backdrop-filter: blur(5px); align-items: center; justify-content: center; }
+.modal-bg { display: none; position: fixed; inset: 0; z-index: 600; background: rgba(10,18,30,0.88); backdrop-filter: blur(5px); align-items: flex-start; justify-content: center; padding-top: 40px; }
 .modal-bg.active { display: flex; }
-.modal { background: var(--gray-800); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg); width: min(760px, 95vw); max-height: 88vh; display: flex; flex-direction: column; animation: popIn 0.2s cubic-bezier(0.34,1.56,0.64,1); overflow: hidden; }
-.modal-header { padding: 18px 22px 14px; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.modal-title { font-size: 15px; font-weight: 600; }
-.modal-sub { font-size: 12px; color: var(--gray-400); margin-top: 3px; }
-.modal-close { background: none; border: none; color: var(--gray-400); font-size: 20px; cursor: pointer; padding: 0 4px; transition: color .12s; }
+.modal { background: var(--gray-800); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg); width: min(820px, 96vw); max-height: calc(100vh - 80px); display: flex; flex-direction: column; animation: popIn 0.2s cubic-bezier(0.34,1.56,0.64,1); overflow: hidden; }
+.modal-header { padding: 16px 22px 13px; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.modal-title { font-size: 14px; font-weight: 600; }
+.modal-sub { font-size: 11px; color: var(--gray-400); margin-top: 3px; }
+.modal-close { background: none; border: none; color: var(--gray-400); font-size: 20px; cursor: pointer; padding: 0 4px; transition: color .12s; line-height: 1; }
 .modal-close:hover { color: var(--white); }
-.modal-mapping { padding: 12px 22px; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
-.mapping-label { font-size: 11px; color: var(--gray-400); font-family: 'DM Mono', monospace; }
-.mapping-col { display: flex; align-items: center; gap: 5px; background: rgba(55,138,221,0.1); border: 1px solid rgba(55,138,221,0.25); border-radius: 20px; padding: 3px 10px; font-size: 11px; font-family: 'DM Mono', monospace; }
-.mapping-col .arrow { color: var(--blue-400); }
-.mapping-col .target { color: var(--blue-100); font-weight: 500; }
-.mapping-col .src { color: var(--gray-400); }
-.modal-preview { flex: 1; overflow: auto; }
+
+/* MAPPING GRID */
+.mapping-section { padding: 14px 22px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.mapping-title { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--gray-400); font-family: 'DM Mono', monospace; margin-bottom: 10px; }
+.mapping-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.map-col {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px; padding: 10px 10px 8px; display: flex; flex-direction: column; gap: 6px;
+}
+.map-col.active { background: rgba(55,138,221,0.1); border-color: rgba(55,138,221,0.3); }
+.map-col.inactive { opacity: 0.35; }
+.map-col-label { font-size: 9px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; font-family: 'DM Mono', monospace; color: var(--gray-400); }
+.map-col.active .map-col-label { color: var(--blue-200); }
+.map-col select {
+  width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 5px; color: var(--white); font-family: 'DM Mono', monospace;
+  font-size: 11px; padding: 4px 6px; cursor: pointer; outline: none;
+  appearance: none; -webkit-appearance: none;
+}
+.map-col select:focus { border-color: var(--blue-400); }
+.map-col-src { font-size: 10px; color: var(--gray-400); font-family: 'DM Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-col.active .map-col-src { color: var(--blue-200); }
+
+/* OPTIONS ROW */
+.options-row { padding: 10px 22px; border-bottom: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.opt-group { display: flex; align-items: center; gap: 8px; }
+.opt-label { font-size: 11px; color: var(--gray-400); font-family: 'DM Mono', monospace; }
+.radio-group { display: flex; gap: 6px; }
+.radio-btn { font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: var(--gray-400); cursor: pointer; font-family: 'Sora', sans-serif; transition: all 0.12s; }
+.radio-btn.sel { background: rgba(55,138,221,0.15); border-color: rgba(55,138,221,0.4); color: var(--blue-100); }
+
+/* PREVIEW */
+.modal-preview { flex: 1; overflow: auto; min-height: 120px; }
 .modal-preview table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: 'DM Mono', monospace; table-layout: auto; }
-.modal-preview thead tr { background: var(--gray-700); position: sticky; top: 0; }
-.modal-preview th { padding: 7px 12px; font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--blue-200); border-bottom: 1px solid rgba(255,255,255,0.06); border-right: 1px solid rgba(255,255,255,0.04); white-space: nowrap; font-weight: 600; }
-.modal-preview th.ign { color: rgba(255,255,255,.2); }
+.modal-preview thead tr { background: var(--gray-700); position: sticky; top: 0; z-index: 2; }
+.modal-preview th { padding: 6px 10px; font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--blue-200); border-bottom: 1px solid rgba(255,255,255,0.06); border-right: 1px solid rgba(255,255,255,0.04); white-space: nowrap; font-weight: 600; }
+.modal-preview th.ign { color: rgba(255,255,255,.18); }
 .modal-preview th:last-child, .modal-preview td:last-child { border-right: none; }
-.modal-preview td { padding: 6px 12px; color: var(--gray-200); border-bottom: 1px solid rgba(255,255,255,0.04); border-right: 1px solid rgba(255,255,255,0.04); white-space: nowrap; }
-.modal-preview td.ign { color: rgba(255,255,255,.2); font-style: italic; }
-.modal-preview tbody tr:hover { background: rgba(255,255,255,0.03); }
-.modal-footer { padding: 13px 22px; border-top: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.modal-info { font-size: 12px; color: var(--gray-400); }
-.modal-info strong { color: var(--white); }
+.modal-preview td { padding: 5px 10px; color: var(--gray-200); border-bottom: 1px solid rgba(255,255,255,0.04); border-right: 1px solid rgba(255,255,255,0.04); white-space: nowrap; }
+.modal-preview td.ign { color: rgba(255,255,255,.18); font-style: italic; }
+.modal-preview td.mapped { color: var(--white); }
+.modal-preview tbody tr:nth-child(odd) { background: rgba(255,255,255,0.015); }
+.modal-preview tbody tr:hover { background: rgba(255,255,255,0.04); }
+
+/* BADGE new rows */
+.badge-new { display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 3px; background: rgba(59,109,17,0.3); color: #90c45a; font-family: 'DM Mono', monospace; margin-left: 6px; vertical-align: middle; }
+.badge-upd { display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 3px; background: rgba(55,138,221,0.2); color: var(--blue-200); font-family: 'DM Mono', monospace; margin-left: 6px; vertical-align: middle; }
+
+.modal-footer { padding: 12px 22px; border-top: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.modal-info { font-size: 11px; color: var(--gray-400); display: flex; gap: 14px; flex-wrap: wrap; }
+.modal-info b { color: var(--white); }
 .modal-actions { display: flex; gap: 8px; }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
@@ -194,7 +222,11 @@ footer { background: var(--gray-800); border-top: 1px solid rgba(255,255,255,0.0
 
 <div class="paste-hint">
   <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
-  Pega datos desde Excel u otra tabla con <kbd>Ctrl + V</kbd> en cualquier parte de la app — se detectan y acomodan automáticamente.
+  <span>Pega desde Excel con <kbd>Ctrl + V</kbd></span>
+  <span class="hint-sep">·</span>
+  <span>Haz clic en una celda primero para elegir dónde empieza el pegado</span>
+  <span class="hint-sep">·</span>
+  <span>Funciona con columnas parciales, completas o datos sin encabezado</span>
 </div>
 
 <main>
@@ -227,6 +259,7 @@ footer { background: var(--gray-800); border-top: 1px solid rgba(255,255,255,0.0
     <span><kbd class="kbd">Tab</kbd> avanza columna</span>
     <span><kbd class="kbd">Enter</kbd> baja fila</span>
     <span><kbd class="kbd">↑ ↓</kbd> navegar</span>
+    <span><kbd class="kbd">Ctrl+V</kbd> pegar tabla</span>
   </div>
   <div class="footer-brand">generador-csv &nbsp;·&nbsp; UTF-8 BOM</div>
 </footer>
@@ -238,37 +271,65 @@ footer { background: var(--gray-800); border-top: 1px solid rgba(255,255,255,0.0
 
 <input type="file" id="file-input" accept=".csv" style="display:none" onchange="handleFileImport(event)" />
 
+<!-- PASTE OVERLAY -->
 <div class="paste-overlay" id="paste-overlay">
   <div class="paste-overlay-box">
     <div class="paste-overlay-icon">📋</div>
-    <div class="paste-overlay-title">Procesando datos pegados…</div>
-    <div class="paste-overlay-sub">Detectando columnas y filas</div>
+    <div class="paste-overlay-title">Procesando datos…</div>
+    <div class="paste-overlay-sub">Analizando columnas y filas</div>
   </div>
 </div>
 
+<!-- PASTE MODAL -->
 <div class="modal-bg" id="paste-modal">
   <div class="modal">
     <div class="modal-header">
       <div>
-        <div class="modal-title">Vista previa del pegado</div>
-        <div class="modal-sub" id="modal-sub">Revisa los datos antes de agregarlos.</div>
+        <div class="modal-title">Configurar pegado</div>
+        <div class="modal-sub" id="modal-sub">Ajusta el mapeo de columnas y las opciones antes de confirmar.</div>
       </div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div class="modal-mapping" id="modal-mapping"></div>
+
+    <!-- COLUMN MAPPING -->
+    <div class="mapping-section">
+      <div class="mapping-title">Mapeo de columnas — arrastra el selector para cambiar destino</div>
+      <div class="mapping-grid" id="mapping-grid"></div>
+    </div>
+
+    <!-- OPTIONS -->
+    <div class="options-row">
+      <div class="opt-group">
+        <span class="opt-label">Modo:</span>
+        <div class="radio-group">
+          <button class="radio-btn sel" id="opt-append" onclick="setMode('append')">Agregar filas nuevas</button>
+          <button class="radio-btn" id="opt-fill" onclick="setMode('fill')">Rellenar desde fila ancla</button>
+        </div>
+      </div>
+      <div class="opt-group" id="skip-header-group">
+        <span class="opt-label">Primera fila:</span>
+        <div class="radio-group">
+          <button class="radio-btn sel" id="opt-skip" onclick="setSkip(true)">Es encabezado (ignorar)</button>
+          <button class="radio-btn" id="opt-noskip" onclick="setSkip(false)">Son datos</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PREVIEW -->
     <div class="modal-preview">
       <table>
         <thead id="modal-thead"></thead>
         <tbody id="modal-tbody"></tbody>
       </table>
     </div>
+
     <div class="modal-footer">
       <div class="modal-info" id="modal-info"></div>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
         <button class="btn btn-primary" onclick="confirmPaste()">
           <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-          Agregar a la tabla
+          Confirmar pegado
         </button>
       </div>
     </div>
@@ -276,30 +337,38 @@ footer { background: var(--gray-800); border-top: 1px solid rgba(255,255,255,0.0
 </div>
 
 <script>
+/* ═══════════════════════════════════════════════
+   CONSTANTS
+═══════════════════════════════════════════════ */
 var COLS = ['NOMBRES','PRIMER_APELLIDO','SEGUNDO_APELLIDO','ASIGNACION','GRUPO'];
-
-var PLACEHOLDERS = {
-  NOMBRES:          'Ej: XIMENA SARAHÍ',
-  PRIMER_APELLIDO:  'Ej: PADRÓN',
-  SEGUNDO_APELLIDO: 'Ej: ZÚÑIGA',
-  ASIGNACION:       'Ej: 004070109',
-  GRUPO:            'A / B'
-};
-
-var COL_CLASS = { ASIGNACION: 'col-asig', GRUPO: 'col-grp' };
-
+var COL_LABELS = { NOMBRES:'Nombres', PRIMER_APELLIDO:'Primer apellido', SEGUNDO_APELLIDO:'Segundo apellido', ASIGNACION:'Asignación', GRUPO:'Grupo' };
+var PLACEHOLDERS = { NOMBRES:'Ej: XIMENA SARAHÍ', PRIMER_APELLIDO:'Ej: PADRÓN', SEGUNDO_APELLIDO:'Ej: ZÚÑIGA', ASIGNACION:'Ej: 004070109', GRUPO:'A / B' };
+var COL_CLASS = { ASIGNACION:'col-asig', GRUPO:'col-grp' };
 var COL_ALIASES = {
   NOMBRES:          ['nombres','nombre','name','names','first name','firstname'],
   PRIMER_APELLIDO:  ['primer apellido','primer_apellido','apellido1','apellido paterno','paterno','last name','lastname','surname'],
   SEGUNDO_APELLIDO: ['segundo apellido','segundo_apellido','apellido2','apellido materno','materno','second last name','second surname'],
-  ASIGNACION:       ['asignacion','asig','assignment','clave','codigo'],
-  GRUPO:            ['grupo','group','gpo','grp','clase']
+  ASIGNACION:       ['asignacion','asig','assignment','clave','codigo','num','numero'],
+  GRUPO:            ['grupo','group','gpo','grp','clase','seccion']
 };
 
+/* ═══════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════ */
 var rows = [];
 var idCounter = 0;
-var pendingPaste = [];
 
+// Paste state
+var pasteRaw = [];          // raw 2d array from clipboard
+var pasteColMap = [];       // array of COLS key or null, one per source column
+var pasteMode = 'append';   // 'append' | 'fill'
+var pasteSkipHeader = true;
+var pasteAnchorRi = null;   // row index where paste starts (for fill mode)
+var pasteAnchorCi = null;   // col index where paste starts (positional)
+
+/* ═══════════════════════════════════════════════
+   UTILS
+═══════════════════════════════════════════════ */
 function uid() { idCounter++; return idCounter; }
 
 function esc(str) {
@@ -312,20 +381,38 @@ function showToast(msg, icon) {
   document.getElementById('toast-icon').textContent = icon || '';
   t.classList.add('show');
   clearTimeout(t._tmr);
-  t._tmr = setTimeout(function() { t.classList.remove('show'); }, 2800);
+  t._tmr = setTimeout(function() { t.classList.remove('show'); }, 3000);
 }
 
-function updateCount() {
-  document.getElementById('row-count').textContent = rows.length;
+function updateCount() { document.getElementById('row-count').textContent = rows.length; }
+
+function normalizeKey(str) {
+  return str.trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9 _]/g,'').replace(/\s+/g,' ').trim();
 }
 
+function detectCol(cell) {
+  var norm = normalizeKey(cell);
+  for (var col in COL_ALIASES) {
+    var aliases = COL_ALIASES[col];
+    for (var i = 0; i < aliases.length; i++) {
+      if (normalizeKey(aliases[i]) === norm) return col;
+    }
+  }
+  return null;
+}
+
+/* ═══════════════════════════════════════════════
+   RENDER TABLE
+═══════════════════════════════════════════════ */
 function render() {
   var tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
   if (rows.length === 0) {
     var tr = document.createElement('tr');
     tr.className = 'empty-row';
-    tr.innerHTML = '<td colspan="7">Sin registros. Agrega una fila o pega datos desde Excel con Ctrl+V.</td>';
+    tr.innerHTML = '<td colspan="7">Sin registros. Agrega una fila o pega desde Excel con Ctrl+V.</td>';
     tbody.appendChild(tr);
     updateCount();
     return;
@@ -333,14 +420,14 @@ function render() {
   for (var i = 0; i < rows.length; i++) {
     var row = rows[i];
     var tr2 = document.createElement('tr');
-    var html = '<td class="row-num">' + (i + 1) + '</td>';
+    var html = '<td class="row-num">' + (i+1) + '</td>';
     for (var ci = 0; ci < COLS.length; ci++) {
       var col = COLS[ci];
       var cls = COL_CLASS[col] ? ' class="' + COL_CLASS[col] + '"' : '';
       html += '<td' + cls + '>'
         + '<input type="text"'
         + ' value="' + esc(row[col]) + '"'
-        + ' placeholder="' + esc(PLACEHOLDERS[col] || '') + '"'
+        + ' placeholder="' + esc(PLACEHOLDERS[col]||'') + '"'
         + ' id="c' + row.id + '_' + ci + '"'
         + ' data-id="' + row.id + '"'
         + ' data-col="' + col + '"'
@@ -357,6 +444,9 @@ function render() {
   updateCount();
 }
 
+/* ═══════════════════════════════════════════════
+   CELL EVENTS
+═══════════════════════════════════════════════ */
 function onInput(input) {
   var id = parseInt(input.getAttribute('data-id'));
   var col = input.getAttribute('data-col');
@@ -368,20 +458,15 @@ function onInput(input) {
 function onKeyNav(e, ri, ci) {
   if (e.key === 'Tab') {
     e.preventDefault();
-    if (ci + 1 < COLS.length) { focusCell(ri, ci + 1); }
-    else if (ri + 1 < rows.length) { focusCell(ri + 1, 0); }
-    else { addRow(true, 0); }
+    if (ci + 1 < COLS.length) focusCell(ri, ci+1);
+    else if (ri + 1 < rows.length) focusCell(ri+1, 0);
+    else addRow(true, 0);
   } else if (e.key === 'Enter') {
     e.preventDefault();
-    if (ri + 1 < rows.length) { focusCell(ri + 1, ci); }
-    else { addRow(true, ci); }
-  } else if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    if (ri + 1 < rows.length) focusCell(ri + 1, ci);
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    if (ri > 0) focusCell(ri - 1, ci);
-  }
+    if (ri + 1 < rows.length) focusCell(ri+1, ci);
+    else addRow(true, ci);
+  } else if (e.key === 'ArrowDown') { e.preventDefault(); if (ri+1 < rows.length) focusCell(ri+1, ci); }
+  else if (e.key === 'ArrowUp')   { e.preventDefault(); if (ri > 0) focusCell(ri-1, ci); }
 }
 
 function focusCell(ri, ci) {
@@ -391,6 +476,9 @@ function focusCell(ri, ci) {
   }
 }
 
+/* ═══════════════════════════════════════════════
+   ROW OPERATIONS
+═══════════════════════════════════════════════ */
 function addRow(focusAfter, focusCol) {
   var id = uid();
   var row = { id: id };
@@ -406,9 +494,7 @@ function addRow(focusAfter, focusCol) {
 
 function deleteRow(id) {
   var next = [];
-  for (var i = 0; i < rows.length; i++) {
-    if (rows[i].id !== id) next.push(rows[i]);
-  }
+  for (var i = 0; i < rows.length; i++) { if (rows[i].id !== id) next.push(rows[i]); }
   rows = next;
   render();
 }
@@ -421,28 +507,27 @@ function clearAll() {
   showToast('Tabla limpiada.', '🗑');
 }
 
+/* ═══════════════════════════════════════════════
+   EXPORT / IMPORT CSV
+═══════════════════════════════════════════════ */
 function exportCSV() {
   if (rows.length === 0) { showToast('No hay datos para exportar.', '⚠'); return; }
-  var BOM = '\uFEFF';
-  var lines = [];
-  lines.push(COLS.join(','));
+  var lines = [COLS.join(',')];
   for (var i = 0; i < rows.length; i++) {
-    var r = rows[i];
     var cells = [];
     for (var c = 0; c < COLS.length; c++) {
-      var v = (r[COLS[c]] || '').trim();
-      if (v.indexOf(',') !== -1 || v.indexOf('"') !== -1 || v.indexOf('\n') !== -1) {
-        v = '"' + v.replace(/"/g, '""') + '"';
-      }
+      var v = (rows[i][COLS[c]] || '').trim();
+      if (v.indexOf(',') !== -1 || v.indexOf('"') !== -1 || v.indexOf('\n') !== -1)
+        v = '"' + v.replace(/"/g,'""') + '"';
       cells.push(v);
     }
     lines.push(cells.join(','));
   }
-  var csv = BOM + lines.join('\r\n');
+  var csv = '\uFEFF' + lines.join('\r\n');
   var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
-  a.href = url; a.download = 'SURVAL_captura.csv'; a.click();
+  a.href = url; a.download = 'Lista_captura.csv'; a.click();
   URL.revokeObjectURL(url);
   showToast('CSV descargado — ' + rows.length + ' registros.', '↓');
 }
@@ -456,32 +541,23 @@ function handleFileImport(e) {
   reader.onload = function(ev) {
     var text = ev.target.result;
     if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-    var lines = text.replace(/\r/g, '').split('\n');
-    var nonEmpty = [];
-    for (var i = 0; i < lines.length; i++) { if (lines[i].trim()) nonEmpty.push(lines[i]); }
-    if (nonEmpty.length < 2) { showToast('El archivo no tiene datos.', '⚠'); return; }
-    var headerLine = nonEmpty[0].split(',');
+    var lines = text.replace(/\r/g,'').split('\n').filter(function(l){return l.trim();});
+    if (lines.length < 2) { showToast('Archivo sin datos.', '⚠'); return; }
+    var hdr = lines[0].split(',');
     var colMap = {};
-    for (var c = 0; c < COLS.length; c++) {
-      for (var h = 0; h < headerLine.length; h++) {
-        if (headerLine[h].trim().toUpperCase() === COLS[c]) { colMap[COLS[c]] = h; break; }
-      }
-    }
+    for (var c = 0; c < COLS.length; c++)
+      for (var h = 0; h < hdr.length; h++)
+        if (hdr[h].trim().toUpperCase() === COLS[c]) { colMap[COLS[c]] = h; break; }
     var imported = [];
-    for (var li = 1; li < nonEmpty.length; li++) {
-      var parts = parseCSVLine(nonEmpty[li]);
+    for (var li = 1; li < lines.length; li++) {
+      var parts = parseCSVLine(lines[li]);
       var row = { id: uid() };
-      for (var c2 = 0; c2 < COLS.length; c2++) {
-        row[COLS[c2]] = (colMap[COLS[c2]] !== undefined) ? (parts[colMap[COLS[c2]]] || '').trim() : '';
-      }
+      for (var c2 = 0; c2 < COLS.length; c2++)
+        row[COLS[c2]] = (colMap[COLS[c2]] !== undefined) ? (parts[colMap[COLS[c2]]]||'').trim() : '';
       imported.push(row);
     }
-    if (rows.length > 0) {
-      if (!confirm('Se agregarán ' + imported.length + ' filas a los ' + rows.length + ' existentes. ¿Continuar?')) {
-        e.target.value = ''; return;
-      }
-    }
-    for (var ii = 0; ii < imported.length; ii++) rows.push(imported[ii]);
+    if (rows.length > 0 && !confirm('Agregar ' + imported.length + ' filas a los ' + rows.length + ' existentes?')) { e.target.value=''; return; }
+    for (var ii=0; ii<imported.length; ii++) rows.push(imported[ii]);
     render();
     showToast(imported.length + ' registros importados.', '↑');
     e.target.value = '';
@@ -490,189 +566,346 @@ function handleFileImport(e) {
 }
 
 function parseCSVLine(line) {
-  var result = [], cur = '', inQ = false;
-  for (var i = 0; i < line.length; i++) {
+  var result=[], cur='', inQ=false;
+  for (var i=0; i<line.length; i++) {
     var ch = line[i];
-    if (ch === '"') {
-      if (inQ && line[i+1] === '"') { cur += '"'; i++; }
-      else inQ = !inQ;
-    } else if (ch === ',' && !inQ) { result.push(cur); cur = ''; }
-    else { cur += ch; }
+    if (ch==='"') { if (inQ && line[i+1]==='"') { cur+='"'; i++; } else inQ=!inQ; }
+    else if (ch===',' && !inQ) { result.push(cur); cur=''; }
+    else { cur+=ch; }
   }
   result.push(cur);
   return result;
 }
 
-/* ─── PASTE FROM EXCEL ─────────────────────────────────── */
-function normalizeKey(str) {
-  return str.trim().toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9 _]/g, '').replace(/\s+/g, ' ').trim();
-}
-
-function detectCol(headerCell) {
-  var norm = normalizeKey(headerCell);
-  for (var col in COL_ALIASES) {
-    var aliases = COL_ALIASES[col];
-    for (var i = 0; i < aliases.length; i++) {
-      if (normalizeKey(aliases[i]) === norm) return col;
-    }
-  }
-  return null;
-}
+/* ═══════════════════════════════════════════════
+   PASTE FROM EXCEL — FLEXIBLE COLUMN MAPPING
+═══════════════════════════════════════════════ */
 
 function parseTSV(text) {
-  var lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  var lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
   var result = [];
-  for (var i = 0; i < lines.length; i++) {
-    if (lines[i].trim() !== '') {
-      result.push(lines[i].split('\t').map(function(c) { return c.trim(); }));
-    }
+  for (var i=0; i<lines.length; i++) {
+    if (lines[i] !== '') result.push(lines[i].split('\t'));
   }
   return result;
 }
 
+/* Detect initial column mapping from first row or position */
+function autoMapCols(firstRow, anchorCi) {
+  var mapping = [];
+  // Try to match by name first
+  var byName = [];
+  for (var i=0; i<firstRow.length; i++) byName.push(detectCol(firstRow[i]));
+  var nameHits = 0;
+  for (var i=0; i<byName.length; i++) { if (byName[i]) nameHits++; }
+
+  if (nameHits >= 1) {
+    // Header detected
+    mapping = byName;
+    pasteSkipHeader = true;
+  } else {
+    // No header — map by position from anchor col
+    var start = (anchorCi !== null && anchorCi !== undefined) ? anchorCi : 0;
+    for (var i=0; i<firstRow.length; i++) {
+      var ci = start + i;
+      mapping.push(ci < COLS.length ? COLS[ci] : null);
+    }
+    pasteSkipHeader = false;
+  }
+  return mapping;
+}
+
+/* Main paste listener */
 document.addEventListener('paste', function(e) {
   var active = document.activeElement;
   var isInCell = active && active.tagName === 'INPUT' && active.getAttribute('data-col');
   var text = (e.clipboardData || window.clipboardData).getData('text');
   if (!text) return;
-  var rows2d = parseTSV(text);
-  if (rows2d.length === 0) return;
-  if (isInCell && rows2d.length === 1 && rows2d[0].length === 1) return;
+
+  var raw = parseTSV(text);
+  if (raw.length === 0) return;
+
+  // Single cell typed value — let browser handle it
+  if (isInCell && raw.length === 1 && raw[0].length === 1) return;
+
   e.preventDefault();
+
+  pasteAnchorRi = isInCell ? parseInt(active.getAttribute('data-ri')) : (rows.length > 0 ? 0 : null);
+  pasteAnchorCi = isInCell ? parseInt(active.getAttribute('data-ci')) : 0;
+  pasteRaw = raw;
+  pasteColMap = autoMapCols(raw[0], pasteAnchorCi);
+
+  // Default mode: if user clicked a cell with data → fill mode, else append
+  if (isInCell && rows.length > 0) {
+    pasteMode = 'fill';
+  } else {
+    pasteMode = 'append';
+  }
+
   document.getElementById('paste-overlay').classList.add('active');
-  var startRi = isInCell ? parseInt(active.getAttribute('data-ri')) : null;
-  var startCi = isInCell ? parseInt(active.getAttribute('data-ci')) : null;
   setTimeout(function() {
     document.getElementById('paste-overlay').classList.remove('active');
-    processPaste(rows2d, startRi, startCi);
-  }, 320);
+    openPasteModal();
+  }, 300);
 });
 
-function processPaste(rows2d, startRi, startCi) {
-  if (!rows2d || rows2d.length === 0) return;
-  var firstRow = rows2d[0];
-  var firstMapped = [];
-  for (var i = 0; i < firstRow.length; i++) firstMapped.push(detectCol(firstRow[i]));
-  var matchCount = 0;
-  for (var i = 0; i < firstMapped.length; i++) { if (firstMapped[i]) matchCount++; }
-  var allText = true;
-  for (var i = 0; i < firstRow.length; i++) {
-    if (!isNaN(firstRow[i]) || firstRow[i].length === 0 || firstRow[i].length > 50) { allText = false; break; }
-  }
-  var hasHeader = matchCount >= 1 || (firstRow.length > 1 && allText);
-  var colMapping, dataRows;
-  if (hasHeader) {
-    colMapping = firstMapped;
-    dataRows = rows2d.slice(1);
-  } else {
-    colMapping = [];
-    for (var i = 0; i < firstRow.length; i++) {
-      var offset = (startCi !== null && startCi !== undefined) ? startCi + i : i;
-      colMapping.push(offset < COLS.length ? COLS[offset] : null);
-    }
-    dataRows = rows2d;
-  }
-  var filtered = [];
-  for (var i = 0; i < dataRows.length; i++) {
-    var r = dataRows[i];
-    var hasData = false;
-    for (var j = 0; j < r.length; j++) { if (r[j].trim() !== '') { hasData = true; break; } }
-    if (hasData) filtered.push(r);
-  }
-  dataRows = filtered;
-  if (dataRows.length === 0) { showToast('No se detectaron datos para pegar.', '⚠'); return; }
-  pendingPaste = [];
-  for (var i = 0; i < dataRows.length; i++) {
-    var r = dataRows[i];
-    var row = { id: uid() };
-    for (var c = 0; c < COLS.length; c++) row[COLS[c]] = '';
-    for (var j = 0; j < r.length; j++) {
-      if (colMapping[j]) row[colMapping[j]] = r[j];
-    }
-    pendingPaste.push(row);
-  }
-  buildModal(firstRow, hasHeader, colMapping, dataRows);
-}
-
-function buildModal(srcHeaders, hasHeader, colMapping, dataRows) {
-  var mappingEl = document.getElementById('modal-mapping');
-  var mappedCount = 0, ignoredCount = 0;
-  for (var i = 0; i < colMapping.length; i++) { if (colMapping[i]) mappedCount++; else ignoredCount++; }
-  var html = '<span class="mapping-label">Mapeo detectado:</span> ';
-  for (var i = 0; i < colMapping.length; i++) {
-    var srcLabel = hasHeader ? srcHeaders[i] : ('Col ' + (i+1));
-    if (colMapping[i]) {
-      html += '<span class="mapping-col"><span class="src">' + esc(srcLabel) + '</span><span class="arrow"> → </span><span class="target">' + colMapping[i] + '</span></span> ';
-    }
-  }
-  if (ignoredCount > 0) {
-    html += '<span class="mapping-label">· ' + ignoredCount + ' col(s) ignorada(s)</span>';
-  }
-  mappingEl.innerHTML = html;
-
-  var thead = document.getElementById('modal-thead');
-  thead.innerHTML = '';
-  var trh = document.createElement('tr');
-  for (var i = 0; i < colMapping.length; i++) {
-    var th = document.createElement('th');
-    var srcLabel = hasHeader ? srcHeaders[i] : ('Col ' + (i+1));
-    th.textContent = colMapping[i] ? (srcLabel + ' → ' + colMapping[i]) : srcLabel;
-    if (!colMapping[i]) th.className = 'ign';
-    trh.appendChild(th);
-  }
-  thead.appendChild(trh);
-
-  var tbody = document.getElementById('modal-tbody');
-  tbody.innerHTML = '';
-  var limit = Math.min(dataRows.length, 50);
-  for (var i = 0; i < limit; i++) {
-    var tr = document.createElement('tr');
-    for (var j = 0; j < dataRows[i].length; j++) {
-      var td = document.createElement('td');
-      td.textContent = dataRows[i][j];
-      if (!colMapping[j]) td.className = 'ign';
-      tr.appendChild(td);
-    }
-    tbody.appendChild(tr);
-  }
-
-  document.getElementById('modal-info').innerHTML =
-    '<strong>' + pendingPaste.length + '</strong> filas · <strong>' + mappedCount + '</strong> columnas mapeadas'
-    + (dataRows.length > 50 ? ' · mostrando primeras 50' : '');
-
-  document.getElementById('modal-sub').textContent = hasHeader
-    ? 'Encabezado detectado — columnas mapeadas automáticamente.'
-    : 'Sin encabezado — columnas mapeadas por posición.';
-
+/* ── MODAL ──────────────────────────────────── */
+function openPasteModal() {
+  updateMappingGrid();
+  updateModeButtons();
+  updateSkipButtons();
+  refreshPreview();
   document.getElementById('paste-modal').classList.add('active');
 }
 
 function closeModal() {
   document.getElementById('paste-modal').classList.remove('active');
-  pendingPaste = [];
+  pasteRaw = [];
 }
 
-function confirmPaste() {
-  if (pendingPaste.length === 0) return;
-  if (rows.length === 1) {
-    var empty = true;
-    for (var c = 0; c < COLS.length; c++) { if (rows[0][COLS[c]]) { empty = false; break; } }
-    if (empty) rows = [];
+/* Mapping grid — one card per source column with a <select> */
+function updateMappingGrid() {
+  var grid = document.getElementById('mapping-grid');
+  grid.innerHTML = '';
+  var firstRow = pasteRaw[0] || [];
+  for (var i=0; i<firstRow.length; i++) {
+    var srcLabel = firstRow[i] || ('Col ' + (i+1));
+    var selectedCol = pasteColMap[i] || '__ignore__';
+    var isActive = selectedCol !== '__ignore__';
+
+    var card = document.createElement('div');
+    card.className = 'map-col' + (isActive ? ' active' : ' inactive');
+    card.setAttribute('data-src-idx', i);
+
+    var labelEl = document.createElement('div');
+    labelEl.className = 'map-col-label';
+    labelEl.textContent = selectedCol !== '__ignore__' ? COL_LABELS[selectedCol] : 'Ignorar';
+    card.appendChild(labelEl);
+
+    var sel = document.createElement('select');
+    sel.setAttribute('data-src-idx', i);
+    sel.onchange = function() { onMapChange(this); };
+
+    // Build options
+    var optIgnore = document.createElement('option');
+    optIgnore.value = '__ignore__';
+    optIgnore.textContent = '— Ignorar —';
+    if (selectedCol === '__ignore__') optIgnore.selected = true;
+    sel.appendChild(optIgnore);
+
+    for (var c=0; c<COLS.length; c++) {
+      var opt = document.createElement('option');
+      opt.value = COLS[c];
+      opt.textContent = COL_LABELS[COLS[c]];
+      if (COLS[c] === selectedCol) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    card.appendChild(sel);
+
+    var srcEl = document.createElement('div');
+    srcEl.className = 'map-col-src';
+    srcEl.title = srcLabel;
+    srcEl.textContent = '"' + srcLabel + '"';
+    card.appendChild(srcEl);
+
+    grid.appendChild(card);
   }
-  for (var i = 0; i < pendingPaste.length; i++) rows.push(pendingPaste[i]);
-  var n = pendingPaste.length;
-  pendingPaste = [];
+}
+
+function onMapChange(sel) {
+  var idx = parseInt(sel.getAttribute('data-src-idx'));
+  var val = sel.value;
+  pasteColMap[idx] = (val === '__ignore__') ? null : val;
+  // Update card appearance
+  var card = sel.parentElement;
+  var labelEl = card.querySelector('.map-col-label');
+  if (val === '__ignore__') {
+    card.className = 'map-col inactive';
+    labelEl.textContent = 'Ignorar';
+  } else {
+    card.className = 'map-col active';
+    labelEl.textContent = COL_LABELS[val];
+  }
+  refreshPreview();
+}
+
+function setMode(m) {
+  pasteMode = m;
+  updateModeButtons();
+  refreshPreview();
+}
+
+function updateModeButtons() {
+  document.getElementById('opt-append').className = 'radio-btn' + (pasteMode==='append' ? ' sel' : '');
+  document.getElementById('opt-fill').className   = 'radio-btn' + (pasteMode==='fill'   ? ' sel' : '');
+}
+
+function setSkip(v) {
+  pasteSkipHeader = v;
+  updateSkipButtons();
+  refreshPreview();
+}
+
+function updateSkipButtons() {
+  document.getElementById('opt-skip').className   = 'radio-btn' + (pasteSkipHeader  ? ' sel' : '');
+  document.getElementById('opt-noskip').className = 'radio-btn' + (!pasteSkipHeader ? ' sel' : '');
+}
+
+/* Build the data rows based on current settings */
+function getDataRows() {
+  if (pasteSkipHeader && pasteRaw.length > 1) return pasteRaw.slice(1);
+  return pasteRaw;
+}
+
+/* Refresh the preview table */
+function refreshPreview() {
+  var dataRows = getDataRows().filter(function(r) {
+    for (var j=0; j<r.length; j++) { if ((r[j]||'').trim()!=='') return true; }
+    return false;
+  });
+
+  var mappedCols = [];
+  for (var i=0; i<pasteColMap.length; i++) { if (pasteColMap[i]) mappedCols.push(pasteColMap[i]); }
+
+  // Count new vs updated rows
+  var anchorRi = (pasteMode === 'fill' && pasteAnchorRi !== null) ? pasteAnchorRi : rows.length;
+  var updatedCount = 0, newCount = 0;
+  for (var d=0; d<dataRows.length; d++) {
+    if (anchorRi + d < rows.length) updatedCount++;
+    else newCount++;
+  }
+
+  // Header
+  var thead = document.getElementById('modal-thead');
+  thead.innerHTML = '';
+  var trh = document.createElement('tr');
+  // Status col
+  var thStatus = document.createElement('th');
+  thStatus.textContent = 'Estado';
+  thStatus.style.width = '70px';
+  trh.appendChild(thStatus);
+
+  for (var i=0; i<pasteColMap.length; i++) {
+    var th = document.createElement('th');
+    var srcLabel = (pasteRaw[0]||[])[i] || ('Col '+(i+1));
+    if (pasteColMap[i]) {
+      th.textContent = srcLabel + ' → ' + COL_LABELS[pasteColMap[i]];
+    } else {
+      th.textContent = srcLabel;
+      th.className = 'ign';
+    }
+    trh.appendChild(th);
+  }
+  thead.appendChild(trh);
+
+  // Body (max 80 preview rows)
+  var tbody = document.getElementById('modal-tbody');
+  tbody.innerHTML = '';
+  var limit = Math.min(dataRows.length, 80);
+  for (var d=0; d<limit; d++) {
+    var r = dataRows[d];
+    var tr2 = document.createElement('tr');
+    var rowIdx = anchorRi + d;
+    var isNew = rowIdx >= rows.length;
+
+    // Status cell
+    var tdSt = document.createElement('td');
+    if (isNew) {
+      tdSt.innerHTML = '<span class="badge-new">+ nueva</span>';
+    } else {
+      tdSt.innerHTML = '<span class="badge-upd">editar</span>';
+    }
+    tr2.appendChild(tdSt);
+
+    for (var j=0; j<pasteColMap.length; j++) {
+      var td = document.createElement('td');
+      td.textContent = (r[j] !== undefined) ? r[j] : '';
+      td.className = pasteColMap[j] ? 'mapped' : 'ign';
+      tr2.appendChild(td);
+    }
+    tbody.appendChild(tr2);
+  }
+
+  // Info bar
+  var infoEl = document.getElementById('modal-info');
+  infoEl.innerHTML =
+    '<span>Filas pegadas: <b>' + dataRows.length + '</b></span>' +
+    '<span>Columnas mapeadas: <b>' + mappedCols.length + '</b></span>' +
+    (updatedCount ? '<span>Filas a editar: <b>' + updatedCount + '</b></span>' : '') +
+    (newCount ? '<span>Filas nuevas: <b>' + newCount + '</b></span>' : '') +
+    (dataRows.length > 80 ? '<span style="color:var(--blue-200)">(mostrando 80 de ' + dataRows.length + ')</span>' : '');
+
+  document.getElementById('modal-sub').textContent =
+    pasteSkipHeader
+      ? 'Primera fila tratada como encabezado (ignorada). Cambia si son datos.'
+      : 'Todas las filas tratadas como datos. Cambia si la primera es encabezado.';
+}
+
+/* Apply the paste */
+function confirmPaste() {
+  var dataRows = getDataRows().filter(function(r) {
+    for (var j=0; j<r.length; j++) { if ((r[j]||'').trim()!=='') return true; }
+    return false;
+  });
+
+  if (dataRows.length === 0) { showToast('No hay datos para pegar.', '⚠'); return; }
+
+  // Remove initial lone empty row
+  if (rows.length === 1) {
+    var allEmpty = true;
+    for (var c=0; c<COLS.length; c++) { if (rows[0][COLS[c]]) { allEmpty=false; break; } }
+    if (allEmpty) rows = [];
+  }
+
+  var anchorRi = (pasteMode === 'fill' && pasteAnchorRi !== null) ? pasteAnchorRi : rows.length;
+
+  var updated = 0, added = 0;
+
+  for (var d=0; d<dataRows.length; d++) {
+    var r = dataRows[d];
+    var targetRi = anchorRi + d;
+
+    if (targetRi < rows.length) {
+      // Edit existing row — only update mapped columns
+      for (var j=0; j<pasteColMap.length; j++) {
+        if (pasteColMap[j] && r[j] !== undefined) {
+          rows[targetRi][pasteColMap[j]] = (r[j] || '').trim();
+        }
+      }
+      updated++;
+    } else {
+      // Add new row
+      var newRow = { id: uid() };
+      for (var c=0; c<COLS.length; c++) newRow[COLS[c]] = '';
+      for (var j=0; j<pasteColMap.length; j++) {
+        if (pasteColMap[j] && r[j] !== undefined) {
+          newRow[pasteColMap[j]] = (r[j] || '').trim();
+        }
+      }
+      rows.push(newRow);
+      added++;
+    }
+  }
+
+  pasteRaw = [];
   document.getElementById('paste-modal').classList.remove('active');
   render();
-  showToast(n + ' fila(s) pegadas correctamente.', '📋');
+
+  var msg = '';
+  if (updated && added) msg = updated + ' actualizadas · ' + added + ' nuevas.';
+  else if (updated) msg = updated + ' fila(s) actualizadas.';
+  else msg = added + ' fila(s) agregadas.';
+  showToast(msg, '📋');
 }
 
+// Close on backdrop click
 document.getElementById('paste-modal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
 
+/* ═══════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════ */
 addRow();
 </script>
 </body>
