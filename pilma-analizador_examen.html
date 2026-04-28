@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PILMA — Analizador de Exámenes ZipGrade</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #161a23;
+    --surface2: #1e2435;
+    --border: #2a3147;
+    --accent: #4f8cff;
+    --accent2: #ff6b6b;
+    --accent3: #43e8a0;
+    --accent4: #f5c842;
+    --text: #e8ecf4;
+    --text2: #8896b3;
+    --text3: #545f7a;
+    --correct: #43e8a0;
+    --wrong: #ff6b6b;
+    --partial: #f5c842;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Space Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 22px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo-mark {
+    width: 42px; height: 42px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: grid; place-items: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 13px;
+    color: #fff; letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px; font-weight: 800;
+    color: var(--text); letter-spacing: .5px;
+  }
+  header h1 span { color: var(--accent); }
+  header p { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .header-right { margin-left: auto; display: flex; gap: 10px; }
+
+  /* ── LAYOUT ── */
+  .shell { display: flex; min-height: calc(100vh - 73px); }
+  .sidebar {
+    width: 280px; flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    display: flex; flex-direction: column; gap: 20px;
+    overflow-y: auto;
+  }
+  .main { flex: 1; padding: 24px 28px; overflow-x: auto; }
+
+  /* ── SECTIONS ── */
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* ── DROP ZONE ── */
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(79,140,255,.05);
+  }
+  .drop-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+  }
+  .drop-icon { font-size: 28px; margin-bottom: 8px; }
+  .drop-zone p { font-size: 11px; color: var(--text2); line-height: 1.6; }
+  .drop-zone strong { color: var(--accent); font-size: 12px; }
+
+  /* ── BTN ── */
+  .btn {
+    padding: 9px 16px;
+    border-radius: 8px;
+    border: none; cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: .5px;
+    transition: all .15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #3a78f0; }
+  .btn-danger { background: var(--accent2); color: #fff; }
+  .btn-danger:hover { background: #e05555; }
+  .btn-success { background: var(--accent3); color: #0d0f14; }
+  .btn-success:hover { background: #35d48e; }
+  .btn-warn { background: var(--accent4); color: #0d0f14; }
+  .btn-warn:hover { background: #e0b530; }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text2);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-full { width: 100%; justify-content: center; }
+
+  /* ── STATS CARDS ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px; margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .stat-card .label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .stat-card .value { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; }
+  .stat-card .sub { font-size: 10px; color: var(--text2); margin-top: 2px; }
+  .stat-card.blue .value { color: var(--accent); }
+  .stat-card.green .value { color: var(--accent3); }
+  .stat-card.red .value { color: var(--accent2); }
+  .stat-card.yellow .value { color: var(--accent4); }
+
+  /* ── TABLE ── */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .table-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .table-toolbar input[type=text] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 7px 12px;
+    flex: 1; min-width: 140px;
+  }
+  .table-toolbar input:focus { outline: none; border-color: var(--accent); }
+  .table-toolbar select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 7px 10px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid var(--border);
+  }
+  thead th:hover { color: var(--accent); }
+  thead th .sort-arrow { margin-left: 4px; opacity: .4; }
+  thead th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td { padding: 10px 14px; white-space: nowrap; }
+  .pct-bar {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .pct-track {
+    flex: 1; height: 6px;
+    background: var(--surface2);
+    border-radius: 3px; min-width: 60px;
+    overflow: hidden;
+  }
+  .pct-fill { height: 100%; border-radius: 3px; transition: width .3s; }
+  .pct-fill.high { background: var(--correct); }
+  .pct-fill.mid  { background: var(--partial); }
+  .pct-fill.low  { background: var(--wrong); }
+  .pct-label { font-size: 11px; font-weight: 700; min-width: 38px; text-align: right; }
+  .pct-label.high { color: var(--correct); }
+  .pct-label.mid  { color: var(--partial); }
+  .pct-label.low  { color: var(--wrong); }
+  .badge-id {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 11px; font-weight: 700;
+    color: var(--accent);
+  }
+  .no-data {
+    text-align: center; padding: 48px;
+    color: var(--text3); font-size: 13px;
+  }
+  .no-data .icon { font-size: 40px; margin-bottom: 10px; }
+
+  /* ── DETAIL PANEL ── */
+  .detail-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    display: none;
+  }
+  .detail-panel.open { display: block; }
+  .detail-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .detail-header h3 { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; }
+  .detail-header .close-btn { margin-left: auto; background: none; border: none; color: var(--text2); cursor: pointer; font-size: 18px; }
+  .answers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+    gap: 6px;
+    padding: 16px;
+  }
+  .answer-cell {
+    border-radius: 7px;
+    padding: 5px 4px;
+    text-align: center;
+    font-size: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .answer-cell .q-num { color: var(--text3); font-size: 9px; }
+  .answer-cell .stu { font-weight: 700; font-size: 13px; margin: 2px 0 1px; }
+  .answer-cell .key { font-size: 9px; color: var(--text3); }
+  .answer-cell.correct { border-color: var(--correct); background: rgba(67,232,160,.08); }
+  .answer-cell.correct .stu { color: var(--correct); }
+  .answer-cell.wrong { border-color: var(--wrong); background: rgba(255,107,107,.08); }
+  .answer-cell.wrong .stu { color: var(--wrong); }
+
+  /* ── SECTIONS CONFIG ── */
+  .sections-config {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .sections-config h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 700;
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 80px 30px;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .section-row input[type=text],
+  .section-row input[type=number] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 7px 10px;
+    width: 100%;
+  }
+  .section-row input:focus { outline: none; border-color: var(--accent); }
+  .section-row label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
+  .section-header-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 80px 30px;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .remove-section-btn {
+    background: none; border: none; color: var(--accent2);
+    cursor: pointer; font-size: 16px; padding: 0;
+    line-height: 1;
+  }
+  .remove-section-btn:hover { color: #ff3333; }
+  .section-color {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; margin-right: 4px;
+  }
+
+  /* ── SECTION SCORES TABLE ── */
+  .section-scores-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .section-scores-header {
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 700;
+  }
+
+  /* ── CHART ── */
+  .chart-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 20px;
+  }
+  .chart-wrap h3 { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; margin-bottom: 14px; }
+  .bar-chart { display: flex; flex-direction: column; gap: 8px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; }
+  .bar-label { font-size: 11px; color: var(--text2); width: 80px; text-align: right; white-space: nowrap; }
+  .bar-track { flex: 1; height: 22px; background: var(--surface2); border-radius: 5px; overflow: hidden; position: relative; }
+  .bar-fill { height: 100%; border-radius: 5px; transition: width .5s cubic-bezier(.4,0,.2,1); }
+  .bar-count { font-size: 11px; color: var(--text2); min-width: 24px; }
+
+  /* ── DIST CHART (horizontal histogram) ── */
+  canvas { max-width: 100%; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 10px 18px;
+    border: none; background: none;
+    color: var(--text3);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all .15s;
+    margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--text2); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 12px; color: var(--text);
+    box-shadow: 0 8px 30px rgba(0,0,0,.4);
+    z-index: 999;
+    opacity: 0; transform: translateY(10px);
+    transition: all .3s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* ── MISC ── */
+  .chip {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 10px; color: var(--text2);
+  }
+  .gap-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  .empty-sections { color: var(--text3); font-size: 11px; text-align: center; padding: 12px; }
+  
+  /* ── FILTER RANGE ── */
+  .filter-range { display: flex; gap: 6px; align-items: center; }
+  .filter-range input { width: 70px; }
+  .filter-range span { color: var(--text3); font-size: 11px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">PIL<br>MA</div>
+  <div>
+    <h1>PILMA <span>Analizador</span></h1>
+    <p>Programa Integral de Monitoreo de Logros de Aprendizaje · ZipGrade CSV</p>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-ghost" id="btnExportCSV" disabled>⬇ Exportar CSV</button>
+    <button class="btn btn-success" id="btnExportSections" disabled>⬇ Exportar Secciones</button>
+  </div>
+</header>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <!-- Upload -->
+    <div>
+      <div class="section-title">Cargar archivo</div>
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept=".csv" multiple>
+        <div class="drop-icon">📂</div>
+        <p><strong>Haz clic o arrastra</strong><br>CSV exportado de ZipGrade<br>(puedes cargar varios)</p>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div>
+      <div class="section-title">Filtros</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <input type="text" id="filterID" placeholder="Buscar ZipGradeID…"
+          style="background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Space Mono',monospace;font-size:11px;padding:7px 12px">
+        <div class="filter-range">
+          <span>% min</span>
+          <input type="number" id="filterPctMin" placeholder="0" min="0" max="100"
+            style="background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Space Mono',monospace;font-size:11px;padding:7px 10px">
+          <span>max</span>
+          <input type="number" id="filterPctMax" placeholder="100" min="0" max="100"
+            style="background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Space Mono',monospace;font-size:11px;padding:7px 10px">
+        </div>
+        <button class="btn btn-ghost btn-full" id="btnClearFilters">✕ Limpiar filtros</button>
+      </div>
+    </div>
+
+    <!-- Section config -->
+    <div>
+      <div class="section-title">Secciones del examen</div>
+      <div class="sections-config" style="padding:12px;margin-bottom:0">
+        <div class="section-header-row" style="margin-bottom:4px">
+          <span style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Materia</span>
+          <span style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Inicio</span>
+          <span style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Fin</span>
+          <span></span>
+        </div>
+        <div id="sectionsContainer"></div>
+        <button class="btn btn-ghost btn-full" id="btnAddSection" style="margin-top:8px;font-size:10px">+ Agregar sección</button>
+      </div>
+    </div>
+
+    <!-- Files loaded -->
+    <div>
+      <div class="section-title">Archivos cargados</div>
+      <div id="fileList" style="font-size:11px;color:var(--text3)">Ninguno</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <!-- Welcome -->
+    <div id="welcomeMsg" class="no-data" style="margin-top:60px">
+      <div class="icon">🎓</div>
+      <p>Carga un CSV exportado de ZipGrade para comenzar el análisis</p>
+    </div>
+
+    <!-- Dashboard (hidden until data loaded) -->
+    <div id="dashboard" style="display:none">
+      <!-- Stats -->
+      <div class="stats-grid" id="statsGrid"></div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" data-tab="tabla">📋 Tabla de Alumnos</button>
+        <button class="tab" data-tab="secciones">📚 Secciones</button>
+        <button class="tab" data-tab="graficas">📊 Gráficas</button>
+        <button class="tab" data-tab="reactivos">🔬 Reactivos</button>
+      </div>
+
+      <!-- TAB: TABLA -->
+      <div class="tab-content active" id="tab-tabla">
+        <!-- Detail panel -->
+        <div class="detail-panel" id="detailPanel">
+          <div class="detail-header">
+            <span>🔍</span>
+            <h3 id="detailTitle">Detalle del alumno</h3>
+            <button class="close-btn" id="closeDetail">✕</button>
+          </div>
+          <div class="answers-grid" id="answersGrid"></div>
+        </div>
+
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <input type="text" id="searchBox" placeholder="Buscar en tabla…">
+            <select id="sortBy">
+              <option value="zipid">Ordenar: ZipGradeID</option>
+              <option value="pct_desc">% Correcto ↓</option>
+              <option value="pct_asc">% Correcto ↑</option>
+              <option value="pts_desc">Puntos ↓</option>
+              <option value="pts_asc">Puntos ↑</option>
+            </select>
+            <span class="chip" id="rowCount">0 alumnos</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table id="mainTable">
+              <thead>
+                <tr>
+                  <th>ZipGradeID</th>
+                  <th>Aciertos</th>
+                  <th>Total</th>
+                  <th>% Correcto</th>
+                  <th>KeyVersion</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: SECCIONES -->
+      <div class="tab-content" id="tab-secciones">
+        <div class="section-scores-wrap">
+          <div class="section-scores-header">📚 Calificaciones por Sección / Materia</div>
+          <div style="overflow-x:auto">
+            <table id="sectionTable">
+              <thead id="sectionTableHead"></thead>
+              <tbody id="sectionTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: GRAFICAS -->
+      <div class="tab-content" id="tab-graficas">
+        <div class="gap-row">
+          <div class="chart-wrap" style="flex:1;min-width:260px">
+            <h3>Distribución de calificaciones</h3>
+            <div class="bar-chart" id="distChart"></div>
+          </div>
+          <div class="chart-wrap" style="flex:1;min-width:260px">
+            <h3>Alumnos por rango de %</h3>
+            <div class="bar-chart" id="rangeChart"></div>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <h3>Promedio por sección</h3>
+          <div class="bar-chart" id="sectionAvgChart"></div>
+        </div>
+      </div>
+
+      <!-- TAB: REACTIVOS -->
+      <div class="tab-content" id="tab-reactivos">
+        <div class="chart-wrap">
+          <h3>% de aciertos por reactivo (dificultad)</h3>
+          <div id="itemChart" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:5px"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════
+//  STATE
+// ══════════════════════════════════
+let allRows = [];        // raw parsed rows (deduplicated)
+let filteredRows = [];   // after filters
+let sections = [];       // [{name, from, to, color}]
+let sortState = { col: 'zipid', dir: 1 };
+
+const SECTION_COLORS = ['#4f8cff','#43e8a0','#f5c842','#ff6b6b','#c77dff','#ff9f43','#54a0ff','#ee5a24'];
+
+// ══════════════════════════════════
+//  CSV PARSER
+// ══════════════════════════════════
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+
+  const headers = parseCSVLine(lines[0]);
+  const rows = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const vals = parseCSVLine(lines[i]);
+    const obj = {};
+    headers.forEach((h, j) => obj[h.trim()] = (vals[j] || '').trim().replace(/^"|"$/g, ''));
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else cur += c;
+  }
+  result.push(cur);
+  return result;
+}
+
+// ══════════════════════════════════
+//  PROCESS ROWS
+// ══════════════════════════════════
+function processRows(rawRows) {
+  // Deduplicate by ZipGradeID (keep first occurrence)
+  const seen = new Set();
+  const deduped = [];
+  for (const r of rawRows) {
+    const id = r['ZipGradeID'];
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+
+    const possible = parseInt(r['PossiblePts']) || 0;
+    const earned   = parseFloat(r['EarnedPts']) || 0;
+    const pct      = parseFloat(r['PercentCorrect']) || 0;
+
+    // Build answers array
+    const answers = [];
+    for (let n = 1; n <= possible; n++) {
+      const stu = r[`Stu${n}`] || '';
+      const key = r[`Key${n}`] || '';
+      const ep  = parseFloat(r[`EarnedPt${n}`]) || 0;
+      if (key !== '') {
+        answers.push({ n, stu, key, earned: ep });
+      }
+    }
+
+    deduped.push({
+      zipID: id,
+      earned,
+      possible,
+      pct,
+      keyVersion: r['KeyVersion'] || '',
+      answers,
+      raw: r
+    });
+  }
+  return deduped;
+}
+
+// ══════════════════════════════════
+//  LOAD FILE
+// ══════════════════════════════════
+let loadedFiles = [];
+
+async function loadFile(file) {
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = e => res(e.target.result);
+    reader.onerror = rej;
+    reader.readAsText(file);
+  });
+}
+
+async function handleFiles(files) {
+  let newRows = [];
+  const names = [];
+  for (const f of files) {
+    try {
+      const text = await loadFile(f);
+      const raw = parseCSV(text);
+      newRows = newRows.concat(raw);
+      names.push(f.name);
+      loadedFiles.push(f.name);
+    } catch(e) { toast('Error al leer ' + f.name, true); }
+  }
+
+  if (!newRows.length) { toast('No se encontraron datos en el archivo', true); return; }
+
+  // Merge and deduplicate with existing
+  const merged = allRows.concat(newRows);
+  allRows = processRows(merged);
+  filteredRows = [...allRows];
+
+  updateFileList();
+  applyFilters();
+  showDashboard();
+  toast(`✓ ${allRows.length} alumnos únicos cargados`);
+}
+
+// ══════════════════════════════════
+//  RENDER
+// ══════════════════════════════════
+function showDashboard() {
+  document.getElementById('welcomeMsg').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  renderStats();
+  renderTable();
+  renderCharts();
+  renderItemChart();
+  renderSectionTable();
+}
+
+function renderStats() {
+  const total = filteredRows.length;
+  const avg = total ? (filteredRows.reduce((s, r) => s + r.pct, 0) / total) : 0;
+  const passing = filteredRows.filter(r => r.pct >= 60).length;
+  const maxPct = total ? Math.max(...filteredRows.map(r => r.pct)) : 0;
+  const minPct = total ? Math.min(...filteredRows.map(r => r.pct)) : 0;
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card blue">
+      <div class="label">Alumnos únicos</div>
+      <div class="value">${total}</div>
+      <div class="sub">registros procesados</div>
+    </div>
+    <div class="stat-card green">
+      <div class="label">Promedio general</div>
+      <div class="value">${avg.toFixed(1)}%</div>
+      <div class="sub">calificación media</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="label">Aprobados (≥60%)</div>
+      <div class="value">${passing}</div>
+      <div class="sub">${total ? ((passing/total)*100).toFixed(0) : 0}% del grupo</div>
+    </div>
+    <div class="stat-card red">
+      <div class="label">Reprobados</div>
+      <div class="value">${total - passing}</div>
+      <div class="sub">${total ? (((total-passing)/total)*100).toFixed(0) : 0}% del grupo</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="label">Calificación máxima</div>
+      <div class="value">${maxPct.toFixed(1)}%</div>
+      <div class="sub">mejor resultado</div>
+    </div>
+    <div class="stat-card red">
+      <div class="label">Calificación mínima</div>
+      <div class="value">${minPct.toFixed(1)}%</div>
+      <div class="sub">menor resultado</div>
+    </div>
+  `;
+}
+
+function pctClass(p) {
+  if (p >= 70) return 'high';
+  if (p >= 50) return 'mid';
+  return 'low';
+}
+
+function renderTable() {
+  let rows = [...filteredRows];
+  const search = document.getElementById('searchBox').value.toLowerCase();
+  if (search) {
+    rows = rows.filter(r => r.zipID.toLowerCase().includes(search) || r.keyVersion.toLowerCase().includes(search));
+  }
+
+  // Sort
+  const sv = document.getElementById('sortBy').value;
+  if (sv === 'pct_desc') rows.sort((a, b) => b.pct - a.pct);
+  else if (sv === 'pct_asc') rows.sort((a, b) => a.pct - b.pct);
+  else if (sv === 'pts_desc') rows.sort((a, b) => b.earned - a.earned);
+  else if (sv === 'pts_asc') rows.sort((a, b) => a.earned - b.earned);
+  else rows.sort((a, b) => a.zipID.localeCompare(b.zipID));
+
+  document.getElementById('rowCount').textContent = `${rows.length} alumno${rows.length !== 1 ? 's' : ''}`;
+
+  const body = document.getElementById('tableBody');
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="6" class="no-data"><div class="icon">🔍</div><p>Sin resultados</p></td></tr>`;
+    return;
+  }
+
+  body.innerHTML = rows.map(r => {
+    const cls = pctClass(r.pct);
+    return `
+    <tr>
+      <td><span class="badge-id">${r.zipID}</span></td>
+      <td>${r.earned}</td>
+      <td>${r.possible}</td>
+      <td>
+        <div class="pct-bar">
+          <div class="pct-track"><div class="pct-fill ${cls}" style="width:${r.pct}%"></div></div>
+          <span class="pct-label ${cls}">${r.pct.toFixed(1)}%</span>
+        </div>
+      </td>
+      <td><span class="chip">${r.keyVersion || '—'}</span></td>
+      <td>
+        <button class="btn btn-ghost" style="font-size:10px;padding:5px 10px" onclick="showDetail('${r.zipID}')">👁 Ver detalle</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function showDetail(zipID) {
+  const r = allRows.find(x => x.zipID === zipID);
+  if (!r) return;
+  document.getElementById('detailTitle').textContent = `Alumno ${zipID} — ${r.earned}/${r.possible} puntos (${r.pct.toFixed(1)}%)`;
+  const grid = document.getElementById('answersGrid');
+  grid.innerHTML = r.answers.map(a => {
+    const cls = a.earned ? 'correct' : 'wrong';
+    return `<div class="answer-cell ${cls}">
+      <div class="q-num">P${a.n}</div>
+      <div class="stu">${a.stu || '–'}</div>
+      <div class="key">${a.key}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('detailPanel').classList.add('open');
+  document.getElementById('detailPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+document.getElementById('closeDetail').addEventListener('click', () => {
+  document.getElementById('detailPanel').classList.remove('open');
+});
+
+// ── CHARTS ──
+function renderCharts() {
+  // Distribution bins: 0-9, 10-19, ..., 90-100
+  const bins = Array.from({length: 10}, (_, i) => ({ label: `${i*10}–${i*10+9}%`, count: 0 }));
+  bins[9].label = '90–100%';
+  filteredRows.forEach(r => {
+    const bi = Math.min(9, Math.floor(r.pct / 10));
+    bins[bi].count++;
+  });
+  const maxCount = Math.max(...bins.map(b => b.count)) || 1;
+
+  document.getElementById('distChart').innerHTML = bins.map(b => {
+    const w = (b.count / maxCount * 100).toFixed(1);
+    const pctVal = parseInt(b.label);
+    const cls = pctVal >= 70 ? 'high' : pctVal >= 50 ? 'mid' : 'low';
+    return `<div class="bar-row">
+      <div class="bar-label">${b.label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:var(--${cls === 'high' ? 'correct' : cls === 'mid' ? 'partial' : 'wrong'})"></div></div>
+      <div class="bar-count">${b.count}</div>
+    </div>`;
+  }).join('');
+
+  // Ranges
+  const ranges = [
+    { label: '90–100%', min: 90, max: 101, color: 'var(--correct)' },
+    { label: '70–89%',  min: 70, max: 90,  color: 'var(--accent)' },
+    { label: '60–69%',  min: 60, max: 70,  color: 'var(--partial)' },
+    { label: '50–59%',  min: 50, max: 60,  color: 'var(--accent2)' },
+    { label: '< 50%',   min: 0,  max: 50,  color: 'var(--wrong)' },
+  ];
+  const totalR = filteredRows.length || 1;
+  document.getElementById('rangeChart').innerHTML = ranges.map(rng => {
+    const cnt = filteredRows.filter(r => r.pct >= rng.min && r.pct < rng.max).length;
+    const w = (cnt / totalR * 100).toFixed(1);
+    return `<div class="bar-row">
+      <div class="bar-label">${rng.label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${rng.color}"></div></div>
+      <div class="bar-count">${cnt}</div>
+    </div>`;
+  }).join('');
+
+  renderSectionAvgChart();
+}
+
+function renderSectionAvgChart() {
+  if (!sections.length) {
+    document.getElementById('sectionAvgChart').innerHTML = '<p style="color:var(--text3);font-size:11px">Agrega secciones en el panel izquierdo para ver promedios por materia.</p>';
+    return;
+  }
+  const avgs = sections.map(sec => {
+    const qFrom = sec.from - 1; const qTo = sec.to;
+    let totalEarned = 0; let totalPossible = 0;
+    filteredRows.forEach(r => {
+      const ans = r.answers.filter(a => a.n >= sec.from && a.n <= sec.to);
+      totalEarned += ans.reduce((s, a) => s + a.earned, 0);
+      totalPossible += ans.length;
+    });
+    const avg = totalPossible ? (totalEarned / totalPossible * 100) : 0;
+    return { name: sec.name, avg, color: sec.color };
+  });
+
+  const maxA = Math.max(...avgs.map(a => a.avg)) || 1;
+  document.getElementById('sectionAvgChart').innerHTML = avgs.map(a => {
+    return `<div class="bar-row">
+      <div class="bar-label" style="width:110px;color:${a.color}">${a.name}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${a.avg}%;background:${a.color}"></div></div>
+      <div class="bar-count" style="min-width:50px;color:${a.color}">${a.avg.toFixed(1)}%</div>
+    </div>`;
+  }).join('');
+}
+
+// ── ITEM ANALYSIS ──
+function renderItemChart() {
+  if (!filteredRows.length) return;
+  const possible = Math.max(...filteredRows.map(r => r.possible));
+  const container = document.getElementById('itemChart');
+  const items = [];
+  for (let n = 1; n <= possible; n++) {
+    const total = filteredRows.filter(r => r.answers.find(a => a.n === n)).length;
+    const correct = filteredRows.reduce((s, r) => {
+      const a = r.answers.find(a => a.n === n);
+      return s + (a ? a.earned : 0);
+    }, 0);
+    const pct = total ? (correct / total * 100) : 0;
+    items.push({ n, pct, total });
+  }
+
+  container.innerHTML = items.map(it => {
+    const cls = pctClass(it.pct);
+    const colors = { high: '#43e8a0', mid: '#f5c842', low: '#ff6b6b' };
+    const bg = colors[cls];
+    return `<div title="Reactivo ${it.n}: ${it.pct.toFixed(0)}% aciertos"
+      style="background:rgba(0,0,0,.2);border:1px solid var(--border);border-radius:6px;
+             text-align:center;padding:6px 4px;cursor:default">
+      <div style="font-size:9px;color:var(--text3)">P${it.n}</div>
+      <div style="font-size:11px;font-weight:700;color:${bg}">${it.pct.toFixed(0)}%</div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════
+//  SECTIONS
+// ══════════════════════════════════
+function renderSections() {
+  const container = document.getElementById('sectionsContainer');
+  if (!sections.length) {
+    container.innerHTML = '<div class="empty-sections">Sin secciones configuradas</div>';
+    return;
+  }
+  container.innerHTML = sections.map((sec, i) => `
+    <div class="section-row" data-i="${i}">
+      <input type="text" value="${sec.name}" placeholder="Materia"
+        onchange="sections[${i}].name=this.value;refreshSections()"
+        style="border-left:3px solid ${sec.color}">
+      <input type="number" value="${sec.from}" min="1" placeholder="Desde"
+        onchange="sections[${i}].from=parseInt(this.value)||1;refreshSections()">
+      <input type="number" value="${sec.to}" min="1" placeholder="Hasta"
+        onchange="sections[${i}].to=parseInt(this.value)||1;refreshSections()">
+      <button class="remove-section-btn" onclick="removeSection(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function addSection() {
+  const color = SECTION_COLORS[sections.length % SECTION_COLORS.length];
+  const possible = allRows.length ? Math.max(...allRows.map(r => r.possible)) : 30;
+  sections.push({ name: `Materia ${sections.length + 1}`, from: 1, to: Math.min(30, possible), color });
+  renderSections();
+  if (allRows.length) refreshSections();
+}
+
+function removeSection(i) {
+  sections.splice(i, 1);
+  renderSections();
+  if (allRows.length) refreshSections();
+}
+
+function refreshSections() {
+  renderSectionTable();
+  renderSectionAvgChart();
+}
+
+function renderSectionTable() {
+  const thead = document.getElementById('sectionTableHead');
+  const tbody = document.getElementById('sectionTableBody');
+
+  if (!sections.length || !filteredRows.length) {
+    thead.innerHTML = '';
+    tbody.innerHTML = `<tr><td colspan="2" class="no-data" style="padding:24px;text-align:center;color:var(--text3);font-size:12px">
+      ${!sections.length ? 'Configura secciones en el panel izquierdo' : 'Sin datos'}
+    </td></tr>`;
+    return;
+  }
+
+  // Header
+  thead.innerHTML = `<tr>
+    <th>ZipGradeID</th>
+    <th>% Global</th>
+    ${sections.map(s => `<th style="color:${s.color}">${s.name}<br><span style="font-size:9px;color:var(--text3)">P${s.from}–P${s.to}</span></th>`).join('')}
+  </tr>`;
+
+  // Rows
+  tbody.innerHTML = filteredRows.map(r => {
+    const secCells = sections.map(sec => {
+      const ans = r.answers.filter(a => a.n >= sec.from && a.n <= sec.to);
+      const totalAns = ans.length;
+      const earned = ans.reduce((s, a) => s + a.earned, 0);
+      const pct = totalAns ? (earned / totalAns * 100) : 0;
+      const cls = pctClass(pct);
+      return `<td>
+        <div class="pct-bar">
+          <div class="pct-track"><div class="pct-fill ${cls}" style="width:${pct}%"></div></div>
+          <span class="pct-label ${cls}">${pct.toFixed(1)}%</span>
+        </div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">${earned}/${totalAns}</div>
+      </td>`;
+    }).join('');
+    const cls = pctClass(r.pct);
+    return `<tr>
+      <td><span class="badge-id">${r.zipID}</span></td>
+      <td><span class="pct-label ${cls}">${r.pct.toFixed(1)}%</span></td>
+      ${secCells}
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════
+//  FILTERS
+// ══════════════════════════════════
+function applyFilters() {
+  const idFilter = document.getElementById('filterID').value.trim();
+  const pctMin   = parseFloat(document.getElementById('filterPctMin').value) || 0;
+  const pctMax   = parseFloat(document.getElementById('filterPctMax').value);
+  const maxVal   = isNaN(pctMax) ? 100 : pctMax;
+
+  filteredRows = allRows.filter(r => {
+    if (idFilter && !r.zipID.includes(idFilter)) return false;
+    if (r.pct < pctMin || r.pct > maxVal) return false;
+    return true;
+  });
+
+  if (allRows.length) {
+    renderStats();
+    renderTable();
+    renderCharts();
+    renderItemChart();
+    renderSectionTable();
+  }
+}
+
+// ══════════════════════════════════
+//  EXPORT CSV
+// ══════════════════════════════════
+function exportCSV() {
+  if (!filteredRows.length) return;
+  const rows = filteredRows;
+  const maxPossible = Math.max(...rows.map(r => r.possible));
+
+  // Build header
+  let headers = ['ZipGradeID','EarnedPts','PossiblePts','PercentCorrect','KeyVersion'];
+  for (let n = 1; n <= maxPossible; n++) {
+    headers.push(`Stu${n}`, `Key${n}`, `EarnedPt${n}`);
+  }
+
+  const lines = [headers.join(',')];
+  rows.forEach(r => {
+    const vals = [r.zipID, r.earned, r.possible, r.pct.toFixed(1), r.keyVersion];
+    for (let n = 1; n <= maxPossible; n++) {
+      const a = r.answers.find(x => x.n === n);
+      vals.push(a ? a.stu : '', a ? a.key : '', a ? a.earned : '');
+    }
+    lines.push(vals.join(','));
+  });
+
+  downloadBlob(lines.join('\n'), 'pilma_filtrado.csv', 'text/csv');
+  toast('✓ CSV exportado correctamente');
+}
+
+function exportSectionsCSV() {
+  if (!filteredRows.length || !sections.length) return;
+
+  const headers = ['ZipGradeID', '% Global', ...sections.map(s => `${s.name} (P${s.from}-P${s.to}) %`), ...sections.map(s => `${s.name} Aciertos`), ...sections.map(s => `${s.name} Total`)];
+  const lines = [headers.join(',')];
+
+  filteredRows.forEach(r => {
+    const secData = sections.map(sec => {
+      const ans = r.answers.filter(a => a.n >= sec.from && a.n <= sec.to);
+      const earned = ans.reduce((s, a) => s + a.earned, 0);
+      const total = ans.length;
+      const pct = total ? (earned / total * 100) : 0;
+      return { pct: pct.toFixed(1), earned, total };
+    });
+    const vals = [
+      r.zipID, r.pct.toFixed(1),
+      ...secData.map(s => s.pct),
+      ...secData.map(s => s.earned),
+      ...secData.map(s => s.total)
+    ];
+    lines.push(vals.join(','));
+  });
+
+  downloadBlob(lines.join('\n'), 'pilma_secciones.csv', 'text/csv');
+  toast('✓ CSV de secciones exportado');
+}
+
+function downloadBlob(content, filename, type) {
+  const blob = new Blob(['\uFEFF' + content], { type: type + ';charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ══════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════
+function updateFileList() {
+  const el = document.getElementById('fileList');
+  if (!loadedFiles.length) { el.textContent = 'Ninguno'; return; }
+  el.innerHTML = loadedFiles.map((f, i) =>
+    `<div style="padding:4px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px">
+      <span style="color:var(--accent3)">✓</span>
+      <span style="word-break:break-all">${f}</span>
+    </div>`
+  ).join('');
+}
+
+function toast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = isError ? 'var(--wrong)' : 'var(--correct)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ══════════════════════════════════
+//  EVENT LISTENERS
+// ══════════════════════════════════
+// File drop
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  handleFiles(Array.from(e.dataTransfer.files));
+});
+fileInput.addEventListener('change', () => handleFiles(Array.from(fileInput.files)));
+
+// Filters
+['filterID','filterPctMin','filterPctMax'].forEach(id => {
+  document.getElementById(id).addEventListener('input', applyFilters);
+});
+document.getElementById('btnClearFilters').addEventListener('click', () => {
+  document.getElementById('filterID').value = '';
+  document.getElementById('filterPctMin').value = '';
+  document.getElementById('filterPctMax').value = '';
+  applyFilters();
+});
+
+// Search & sort
+document.getElementById('searchBox').addEventListener('input', renderTable);
+document.getElementById('sortBy').addEventListener('change', renderTable);
+
+// Sections
+document.getElementById('btnAddSection').addEventListener('click', addSection);
+renderSections();
+
+// Tabs
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'secciones') renderSectionTable();
+    if (btn.dataset.tab === 'graficas') renderCharts();
+    if (btn.dataset.tab === 'reactivos') renderItemChart();
+  });
+});
+
+// Export
+document.getElementById('btnExportCSV').addEventListener('click', exportCSV);
+document.getElementById('btnExportSections').addEventListener('click', exportSectionsCSV);
+
+// Enable exports when data loaded
+const origShowDashboard = showDashboard;
+window.showDashboard = function() {
+  origShowDashboard();
+  document.getElementById('btnExportCSV').disabled = false;
+  document.getElementById('btnExportSections').disabled = false;
+};
+</script>
+</body>
+</html>
