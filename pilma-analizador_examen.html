@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PILMA — Analizador ZipGrade</title>
+<title>PIMLA — Analizador ZipGrade</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap');
@@ -128,14 +128,23 @@ tbody td{padding:9px 13px;white-space:nowrap;}
 .slist label:hover{background:var(--surface2);}
 .slist input{accent-color:var(--accent);}
 #stuSearch{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Space Mono',monospace;font-size:11px;padding:6px 10px;margin-bottom:8px;}
-#stuSearch:focus{outline:none;border-color:var(--accent);}
+.excl-badge{display:flex;align-items:flex-start;gap:6px;background:rgba(255,107,107,.08);border:1px solid var(--accent2);border-radius:7px;padding:6px 8px;font-size:10px;}
+.excl-badge .enum{font-weight:700;color:var(--accent2);white-space:nowrap;margin-top:1px;}
+.excl-badge .ecomment{color:var(--text2);line-height:1.4;flex:1;word-break:break-word;}
+.excl-badge .ermv{background:none;border:none;color:var(--accent2);cursor:pointer;font-size:13px;padding:0;line-height:1;flex-shrink:0;}
+/* MODAL COMMENT */
+.emodal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:400px;max-width:95vw;}
+.emodal h3{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;margin-bottom:6px;}
+.emodal p{font-size:11px;color:var(--text2);margin-bottom:14px;}
+.emodal textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Space Mono',monospace;font-size:11px;padding:9px 11px;resize:vertical;min-height:80px;line-height:1.5;}
+.emodal textarea:focus{outline:none;border-color:var(--accent);}
 </style>
 </head>
 <body>
 <header>
-  <div class="logo-mark">PIL<br>MA</div>
+  <div class="logo-mark">PIM<br>LA</div>
   <div>
-    <h1>PILMA <span>Analizador</span></h1>
+    <h1>PIMLA <span>Analizador</span></h1>
     <p>Programa Integral de Monitoreo de Logros de Aprendizaje · ZipGrade CSV</p>
   </div>
   <div class="header-right">
@@ -179,6 +188,17 @@ tbody td{padding:9px 13px;white-space:nowrap;}
         </div>
         <div id="secCont"></div>
         <button class="btn btn-ghost btn-full" id="btnAddSec" style="margin-top:7px;font-size:10px">+ Agregar sección</button>
+      </div>
+    </div>
+    <div>
+      <div class="stitle">Reactivos excluidos</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px">
+        <p style="font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.5">Reactivos que no se contarán en estadísticas ni reportes. Requiere datos cargados.</p>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <input type="number" id="exclNum" class="sinput" placeholder="Nº reactivo" min="1" style="width:90px">
+          <button class="btn btn-ghost btn-full" id="btnAddExcl" style="font-size:10px">+ Excluir</button>
+        </div>
+        <div id="exclList" style="display:flex;flex-direction:column;gap:5px"></div>
       </div>
     </div>
     <div>
@@ -290,11 +310,104 @@ tbody td{padding:9px 13px;white-space:nowrap;}
   </div>
 </div>
 
+<!-- EXCL COMMENT MODAL -->
+<div class="moverlay" id="exclModal">
+  <div class="emodal">
+    <h3>⚠ Excluir Reactivo <span id="exclModalNum"></span></h3>
+    <p>Escribe el motivo por el que este reactivo no se contemplará en la calificación ni en los reportes.</p>
+    <textarea id="exclComment" placeholder="Ej: Reactivo con error de redacción, respuesta correcta ambigua, problema de impresión…"></textarea>
+    <div class="mfoot">
+      <button class="btn btn-ghost" id="btnCancelExcl">Cancelar</button>
+      <button class="btn btn-pdf" id="btnConfirmExcl">✓ Confirmar exclusión</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════ STATE
 let allRows=[],filtRows=[],sections=[],loadedFiles=[];
+// excludedItems: [{n: number, comment: string}]
+let excludedItems=[];
 const SCOLS=['#2563eb','#16a34a','#ca8a04','#dc2626','#7c3aed','#ea580c','#0891b2','#be185d'];
 let rtype='general';
+
+// ═══════ EXCLUDED ITEMS
+let pendingExclN=null;
+
+function getExcludedNums(){return new Set(excludedItems.map(e=>e.n));}
+
+// Recalculate a row's stats ignoring excluded reactivos
+function calcEffective(row){
+  const excl=getExcludedNums();
+  const active=row.answers.filter(a=>!excl.has(a.n));
+  const earned=active.reduce((s,a)=>s+a.earned,0);
+  const possible=active.length;
+  const pct=possible?(earned/possible*100):0;
+  return{earned,possible,pct,activeAnswers:active};
+}
+
+function renderExclList(){
+  const el=document.getElementById('exclList');
+  if(!excludedItems.length){
+    el.innerHTML='<div style="font-size:10px;color:var(--text3);text-align:center;padding:4px">Sin exclusiones</div>';
+    return;
+  }
+  el.innerHTML=excludedItems.map((e,i)=>`
+    <div class="excl-badge">
+      <span class="enum">P${e.n}</span>
+      <span class="ecomment">${e.comment||'Sin comentario'}</span>
+      <button class="ermv" onclick="removeExcl(${i})" title="Quitar exclusión">×</button>
+    </div>`).join('');
+}
+
+function addExcl(){
+  const inp=document.getElementById('exclNum');
+  const n=parseInt(inp.value);
+  if(!n||n<1){showToast('Ingresa un número de reactivo válido',true);return;}
+  if(excludedItems.find(e=>e.n===n)){showToast(`P${n} ya está excluido`,true);inp.value='';return;}
+  // Check if n is valid (within range of loaded data)
+  if(allRows.length){
+    const maxP=Math.max(...allRows.map(r=>r.possible));
+    if(n>maxP){showToast(`P${n} no existe (máximo P${maxP})`,true);return;}
+  }
+  pendingExclN=n;
+  document.getElementById('exclModalNum').textContent=`P${n}`;
+  document.getElementById('exclComment').value='';
+  document.getElementById('exclModal').classList.add('open');
+  inp.value='';
+}
+
+function confirmExcl(){
+  if(pendingExclN===null)return;
+  const comment=document.getElementById('exclComment').value.trim();
+  excludedItems.push({n:pendingExclN,comment});
+  excludedItems.sort((a,b)=>a.n-b.n);
+  pendingExclN=null;
+  document.getElementById('exclModal').classList.remove('open');
+  renderExclList();
+  if(allRows.length){applyFilters();}
+  showToast(`✓ Reactivo P${excludedItems[excludedItems.length-1]?.n||''} excluido`);
+}
+
+function removeExcl(i){
+  const n=excludedItems[i].n;
+  excludedItems.splice(i,1);
+  renderExclList();
+  if(allRows.length){applyFilters();}
+  showToast(`P${n} reincorporado al cálculo`);
+}
+
+// Show excluded badge on reactivos tab
+function exclBanner(){
+  const excl=excludedItems;
+  if(!excl.length)return'';
+  return`<div style="background:rgba(255,107,107,.08);border:1px solid var(--accent2);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:var(--text2)">
+    <strong style="color:var(--accent2)">⚠ Reactivos excluidos del cálculo (${excl.length}):</strong>
+    <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">
+      ${excl.map(e=>`<span style="background:rgba(255,107,107,.15);border:1px solid var(--accent2);border-radius:5px;padding:2px 8px;font-size:10px;color:var(--accent2)" title="${e.comment||'Sin comentario'}">P${e.n}</span>`).join('')}
+    </div>
+  </div>`;
+}
 
 // ═══════ CSV
 function parseCSV(txt){
@@ -574,7 +687,7 @@ async function generatePDF(){
     // light bg band
     doc.setFillColor(239,246,255);pr(doc,0,6,210,20,'F');
     doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(...C.text);
-    doc.text('PILMA — Reporte de Evaluación',M,15);
+    doc.text('PIMLA — Reporte de Evaluación',M,15);
     doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...C.text2);
     doc.text(title,M,21);
     if(sub){doc.setFontSize(7.5);doc.setTextColor(...C.text3);doc.text(sub,M,26);}
@@ -943,13 +1056,13 @@ async function generatePDF(){
     doc.setPage(i);
     doc.setDrawColor(...C.border);doc.setLineWidth(0.3);doc.line(M,287,W-M,287);
     doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.text3);
-    doc.text('PILMA — Programa Integral de Monitoreo de Logros de Aprendizaje',M,292);
+    doc.text('PIMLA — Programa Integral de Monitoreo de Logros de Aprendizaje',M,292);
     doc.setFont('helvetica','bold');doc.setTextColor(...C.text2);
     doc.text(`${i} / ${total}`,W-M,292,{align:'right'});
   }
 
   setProgress(100,'¡Listo!');
-  const fname=`PILMA_${new Date().toISOString().slice(0,10)}.pdf`;
+  const fname=`PIMLA_${new Date().toISOString().slice(0,10)}.pdf`;
   doc.save(fname);
   showToast(`✓ PDF descargado: ${fname}`);
   setTimeout(()=>{
@@ -1027,4 +1140,4 @@ renderSecs();
 </script>
 </body>
 </html>
-</html>
+
