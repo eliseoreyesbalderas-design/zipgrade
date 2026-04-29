@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Filtro ZipGrade — PILMA</title>
+<style>
+  :root {
+    --bg: #f7f6f2;
+    --surface: #ffffff;
+    --surface2: #f1f0ea;
+    --accent: #185FA5;
+    --accent-light: #E6F1FB;
+    --accent-dark: #042C53;
+    --success: #3B6D11;
+    --success-bg: #EAF3DE;
+    --text: #2C2C2A;
+    --text-muted: #5F5E5A;
+    --text-hint: #888780;
+    --border: rgba(44,44,42,0.15);
+    --border-md: rgba(44,44,42,0.3);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --font: 'Courier New', 'Lucida Console', monospace;
+    --font-ui: system-ui, -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-ui);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  header {
+    background: var(--accent-dark);
+    color: #B5D4F4;
+    padding: 1.25rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 3px solid #378ADD;
+  }
+
+  .header-icon {
+    width: 36px; height: 36px;
+    background: #378ADD;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .header-icon svg { width: 20px; height: 20px; fill: white; }
+
+  header h1 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: 0.03em;
+  }
+
+  header p {
+    font-size: 12px;
+    color: #85B7EB;
+    margin-top: 2px;
+  }
+
+  .main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1.5rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 0.5px solid var(--border);
+  }
+
+  .upload-zone {
+    border: 1.5px dashed var(--border-md);
+    border-radius: var(--radius);
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: var(--surface2);
+    margin-bottom: 1rem;
+  }
+
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+
+  .upload-zone input { display: none; }
+
+  .upload-icon { font-size: 28px; margin-bottom: 0.5rem; }
+
+  .upload-zone p {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .upload-zone strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .file-loaded {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 0.6rem 0.9rem;
+    background: var(--success-bg);
+    border: 0.5px solid #C0DD97;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--success);
+    font-weight: 500;
+    margin-bottom: 1rem;
+  }
+
+  .controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 1rem;
+    align-items: end;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 640px) {
+    .controls-grid { grid-template-columns: 1fr; }
+  }
+
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .field input {
+    width: 100%;
+    font-family: var(--font);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--border-md);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .field input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(24,95,165,0.12);
+  }
+
+  .field input::placeholder { color: var(--text-hint); font-weight: 400; letter-spacing: 0; }
+
+  .mode-toggle {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border-md);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+
+  .mode-toggle button {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    background: var(--surface2);
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+
+  .mode-toggle button.active {
+    background: var(--accent);
+    color: white;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.55rem 1.1rem;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-md);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--surface);
+    color: var(--text);
+    font-family: var(--font-ui);
+  }
+
+  .btn:hover { background: var(--surface2); border-color: var(--accent); }
+  .btn:active { transform: scale(0.98); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+
+  .btn-primary:hover { background: #0C447C; border-color: #0C447C; }
+
+  .btn-success {
+    background: var(--success);
+    color: white;
+    border-color: var(--success);
+  }
+
+  .btn-success:hover { background: #27500A; border-color: #27500A; }
+  .btn-success:disabled { background: var(--text-hint); border-color: var(--text-hint); cursor: not-allowed; transform: none; }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    margin-bottom: 1.25rem;
+  }
+
+  .stat-box {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-hint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    max-height: 420px;
+    overflow-y: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  thead th {
+    background: var(--accent-dark);
+    color: #85B7EB;
+    padding: 0.5rem 0.75rem;
+    font-weight: 600;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    text-align: left;
+    border-right: 0.5px solid rgba(133,183,235,0.2);
+  }
+
+  thead th.zip-col {
+    background: #185FA5;
+    color: white;
+  }
+
+  tbody tr { border-bottom: 0.5px solid var(--border); }
+  tbody tr:hover { background: var(--accent-light); }
+
+  tbody td {
+    padding: 0.4rem 0.75rem;
+    color: var(--text);
+    border-right: 0.5px solid var(--border);
+  }
+
+  tbody td.zip-col {
+    font-family: var(--font);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--accent);
+    background: #f0f6fd;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-hint);
+  }
+
+  .empty-state p { font-size: 14px; margin-top: 0.5rem; }
+
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 100px;
+    background: var(--accent-light);
+    color: var(--accent-dark);
+    margin-left: 6px;
+  }
+
+  .hint {
+    font-size: 11px;
+    color: var(--text-hint);
+    margin-top: 4px;
+  }
+
+  .action-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .notice {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 0.5rem 0.75rem;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--accent);
+  }
+
+  #no-results {
+    display: none;
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-hint);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-icon">
+    <svg viewBox="0 0 24 24"><path d="M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4zm2.5 2.1h-15V5h15v14.1zm0-16.1h-15c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+  </div>
+  <div>
+    <h1>Filtro ZipGradeID — PILMA</h1>
+    <p>Filtra y exporta registros por inicio o terminación del código ZipGrade</p>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Carga de archivo -->
+  <div class="card">
+    <div class="card-title">Cargar archivo CSV</div>
+    <div class="upload-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".csv">
+      <div class="upload-icon">📂</div>
+      <p><strong>Haz clic para seleccionar</strong> o arrastra tu archivo CSV aquí</p>
+      <p style="margin-top:4px; font-size:11px;">Compatible con exportaciones de ZipGrade / PILMA</p>
+    </div>
+    <div class="file-loaded" id="fileLoaded">
+      <span>✓</span>
+      <span id="fileLoadedName"></span>
+      <span style="color:#639922; font-weight:400; margin-left:4px;" id="fileLoadedRows"></span>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card">
+    <div class="card-title">Parámetros de filtro — ZipGradeID</div>
+
+    <div style="margin-bottom:0.75rem;">
+      <div class="mode-toggle">
+        <button id="modeStart" class="active" onclick="setMode('start')">Empieza con…</button>
+        <button id="modeEnd" onclick="setMode('end')">Termina con…</button>
+        <button id="modeBoth" onclick="setMode('both')">Ambos</button>
+      </div>
+    </div>
+
+    <div class="controls-grid">
+      <div class="field" id="fieldStart">
+        <label>Inicia con (prefijo)</label>
+        <input type="text" id="prefixInput" placeholder="Ej: 40207" maxlength="20">
+        <div class="hint">Primeros dígitos del ZipGradeID</div>
+      </div>
+      <div class="field" id="fieldEnd">
+        <label>Termina con (sufijo)</label>
+        <input type="text" id="suffixInput" placeholder="Ej: 0204" maxlength="20">
+        <div class="hint">Últimos dígitos del ZipGradeID</div>
+      </div>
+      <div>
+        <button class="btn btn-primary" onclick="applyFilter()">
+          <span>Filtrar</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="notice" id="filterHint">
+      Carga un archivo CSV y define el prefijo o sufijo para filtrar registros.
+    </div>
+  </div>
+
+  <!-- Resultados -->
+  <div class="card" id="resultsCard" style="display:none;">
+    <div class="card-title">
+      Vista previa de resultados
+      <span class="tag" id="countTag">0 registros</span>
+    </div>
+
+    <div class="stats-row" id="statsRow"></div>
+
+    <div class="table-wrap" id="tableWrap">
+      <div id="no-results">No se encontraron registros con los criterios indicados.</div>
+      <table id="previewTable">
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:1rem;" class="action-row">
+      <button class="btn btn-success" id="exportBtn" onclick="exportCSV()" disabled>
+        ⬇ Exportar CSV filtrado
+      </button>
+      <span style="font-size:12px; color:var(--text-hint);" id="exportHint"></span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let allRows = [];
+let headers = [];
+let filteredRows = [];
+let zipColIndex = -1;
+let filterMode = 'start';
+let currentFileName = '';
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) handleFile(fileInput.files[0]);
+});
+
+function setMode(mode) {
+  filterMode = mode;
+  document.getElementById('modeStart').classList.toggle('active', mode === 'start');
+  document.getElementById('modeEnd').classList.toggle('active', mode === 'end');
+  document.getElementById('modeBoth').classList.toggle('active', mode === 'both');
+
+  const fs = document.getElementById('fieldStart');
+  const fe = document.getElementById('fieldEnd');
+  fs.style.opacity = (mode === 'end') ? '0.4' : '1';
+  fe.style.opacity = (mode === 'start') ? '0.4' : '1';
+  fs.querySelector('input').disabled = (mode === 'end');
+  fe.querySelector('input').disabled = (mode === 'start');
+}
+
+function parseCSV(text) {
+  const lines = [];
+  let inQuote = false, current = '', row = [];
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') {
+      if (inQuote && text[i+1] === '"') { current += '"'; i++; }
+      else inQuote = !inQuote;
+    } else if (ch === ',' && !inQuote) {
+      row.push(current); current = '';
+    } else if ((ch === '\n' || ch === '\r') && !inQuote) {
+      if (ch === '\r' && text[i+1] === '\n') i++;
+      row.push(current); current = '';
+      lines.push(row); row = [];
+    } else {
+      current += ch;
+    }
+  }
+  if (current !== '' || row.length) { row.push(current); lines.push(row); }
+  return lines;
+}
+
+function handleFile(file) {
+  currentFileName = file.name.replace(/\.csv$/i, '');
+  const reader = new FileReader();
+  reader.onload = e => {
+    const parsed = parseCSV(e.target.result);
+    if (parsed.length < 2) { alert('El archivo no tiene datos suficientes.'); return; }
+
+    headers = parsed[0];
+    allRows = parsed.slice(1).filter(r => r.some(c => c.trim() !== ''));
+    zipColIndex = headers.findIndex(h => h.trim().toLowerCase() === 'zipgradeid');
+
+    if (zipColIndex === -1) {
+      alert('No se encontró la columna ZipGradeID en el archivo.');
+      return;
+    }
+
+    document.getElementById('fileLoaded').style.display = 'flex';
+    document.getElementById('fileLoadedName').textContent = file.name;
+    document.getElementById('fileLoadedRows').textContent = `— ${allRows.length} registros cargados`;
+    document.getElementById('filterHint').textContent =
+      `Columna ZipGradeID encontrada en posición ${zipColIndex + 1}. Define el prefijo o sufijo y haz clic en Filtrar.`;
+
+    filteredRows = [];
+    document.getElementById('resultsCard').style.display = 'none';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function applyFilter() {
+  if (!allRows.length) { alert('Primero carga un archivo CSV.'); return; }
+
+  const prefix = document.getElementById('prefixInput').value.trim();
+  const suffix = document.getElementById('suffixInput').value.trim();
+
+  if (filterMode === 'start' && !prefix) { alert('Ingresa un prefijo para filtrar.'); return; }
+  if (filterMode === 'end' && !suffix) { alert('Ingresa un sufijo para filtrar.'); return; }
+  if (filterMode === 'both' && !prefix && !suffix) { alert('Ingresa al menos un prefijo o sufijo.'); return; }
+
+  filteredRows = allRows.filter(row => {
+    const zip = (row[zipColIndex] || '').toString().trim();
+    if (filterMode === 'start') return zip.startsWith(prefix);
+    if (filterMode === 'end') return zip.endsWith(suffix);
+    if (filterMode === 'both') {
+      const matchPre = prefix ? zip.startsWith(prefix) : true;
+      const matchSuf = suffix ? zip.endsWith(suffix) : true;
+      return matchPre && matchSuf;
+    }
+    return false;
+  });
+
+  renderResults(prefix, suffix);
+}
+
+function renderResults(prefix, suffix) {
+  const card = document.getElementById('resultsCard');
+  card.style.display = 'block';
+
+  document.getElementById('countTag').textContent = `${filteredRows.length} registros`;
+
+  const zipValues = filteredRows.map(r => (r[zipColIndex] || '').toString().trim());
+  const unique = new Set(zipValues).size;
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-box"><div class="stat-num">${filteredRows.length}</div><div class="stat-label">Filas filtradas</div></div>
+    <div class="stat-box"><div class="stat-num">${allRows.length}</div><div class="stat-label">Total original</div></div>
+    <div class="stat-box"><div class="stat-num">${unique}</div><div class="stat-label">ZipIDs únicos</div></div>
+    <div class="stat-box"><div class="stat-num">${headers.length}</div><div class="stat-label">Columnas</div></div>
+  `;
+
+  const thead = document.getElementById('tableHead');
+  const tbody = document.getElementById('tableBody');
+  const noRes = document.getElementById('no-results');
+  const previewTable = document.getElementById('previewTable');
+
+  const MAX_COLS = 18;
+  const displayHeaders = headers.slice(0, MAX_COLS);
+  const hasMore = headers.length > MAX_COLS;
+
+  thead.innerHTML = '<tr>' + displayHeaders.map((h, i) =>
+    `<th class="${i === zipColIndex ? 'zip-col' : ''}">${h || '—'}</th>`
+  ).join('') + (hasMore ? `<th>… +${headers.length - MAX_COLS} más</th>` : '') + '</tr>';
+
+  if (filteredRows.length === 0) {
+    previewTable.style.display = 'none';
+    noRes.style.display = 'block';
+    document.getElementById('exportBtn').disabled = true;
+    document.getElementById('exportHint').textContent = 'Sin resultados para exportar.';
+  } else {
+    previewTable.style.display = 'table';
+    noRes.style.display = 'none';
+
+    const preview = filteredRows.slice(0, 200);
+    tbody.innerHTML = preview.map(row =>
+      '<tr>' + displayHeaders.map((_, i) =>
+        `<td class="${i === zipColIndex ? 'zip-col' : ''}">${row[i] !== undefined ? row[i] : ''}</td>`
+      ).join('') + (hasMore ? '<td style="color:var(--text-hint)">…</td>' : '') + '</tr>'
+    ).join('');
+
+    document.getElementById('exportBtn').disabled = false;
+    const hint = filteredRows.length > 200
+      ? `Mostrando primeros 200 de ${filteredRows.length}. El CSV exportado tendrá todos.`
+      : `${filteredRows.length} registros listos para exportar con todos los ${headers.length} encabezados.`;
+    document.getElementById('exportHint').textContent = hint;
+  }
+
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function escapeCSV(val) {
+  const s = (val === null || val === undefined) ? '' : String(val);
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function exportCSV() {
+  if (!filteredRows.length) return;
+
+  const lines = [
+    headers.map(escapeCSV).join(','),
+    ...filteredRows.map(row => {
+      const full = headers.map((_, i) => escapeCSV(row[i] !== undefined ? row[i] : ''));
+      return full.join(',');
+    })
+  ];
+
+  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+
+  const prefix = document.getElementById('prefixInput').value.trim();
+  const suffix = document.getElementById('suffixInput').value.trim();
+  let tag = '';
+  if (prefix) tag += `_ini-${prefix}`;
+  if (suffix) tag += `_fin-${suffix}`;
+  a.href = url;
+  a.download = `${currentFileName}_filtrado${tag}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+setMode('start');
+</script>
+</body>
+</html>
