@@ -464,22 +464,26 @@ function showDash(){
   renderStats();renderTable();renderCharts();renderItems();renderSecTable();
 }
 function pc(p){return p>=70?'hi':p>=50?'md':'lo';}
+// Attach effective (excl-adjusted) stats to each filtered row
+function withEffective(rows){return rows.map(r=>({...r,...calcEffective(r)}));}
 function renderStats(){
-  const t=filtRows.length;
-  const avg=t?(filtRows.reduce((s,r)=>s+r.pct,0)/t):0;
-  const pass=filtRows.filter(r=>r.pct>=60).length;
-  const mx=t?Math.max(...filtRows.map(r=>r.pct)):0;
-  const mn=t?Math.min(...filtRows.map(r=>r.pct)):0;
+  const rows=withEffective(filtRows);
+  const t=rows.length;
+  const avg=t?(rows.reduce((s,r)=>s+r.pct,0)/t):0;
+  const pass=rows.filter(r=>r.pct>=60).length;
+  const mx=t?Math.max(...rows.map(r=>r.pct)):0;
+  const mn=t?Math.min(...rows.map(r=>r.pct)):0;
+  const exclNote=excludedItems.length?` <span style="font-size:9px;color:var(--accent2)">(excl. ${excludedItems.length} react.)</span>`:'';
   document.getElementById('statsGrid').innerHTML=`
     <div class="stat-card blue"><div class="lbl">Alumnos únicos</div><div class="val">${t}</div><div class="sub">procesados</div></div>
-    <div class="stat-card green"><div class="lbl">Promedio</div><div class="val">${avg.toFixed(1)}%</div><div class="sub">media del grupo</div></div>
+    <div class="stat-card green"><div class="lbl">Promedio${exclNote}</div><div class="val">${avg.toFixed(1)}%</div><div class="sub">media del grupo</div></div>
     <div class="stat-card yellow"><div class="lbl">Aprobados ≥60%</div><div class="val">${pass}</div><div class="sub">${t?((pass/t)*100).toFixed(0):0}% del grupo</div></div>
     <div class="stat-card red"><div class="lbl">Reprobados</div><div class="val">${t-pass}</div><div class="sub">${t?(((t-pass)/t)*100).toFixed(0):0}% del grupo</div></div>
     <div class="stat-card blue"><div class="lbl">Máximo</div><div class="val">${mx.toFixed(1)}%</div><div class="sub">mejor resultado</div></div>
     <div class="stat-card red"><div class="lbl">Mínimo</div><div class="val">${mn.toFixed(1)}%</div><div class="sub">menor resultado</div></div>`;
 }
 function renderTable(){
-  let rows=[...filtRows];
+  let rows=withEffective(filtRows);
   const s=document.getElementById('srch').value.toLowerCase();
   if(s)rows=rows.filter(r=>r.zipID.toLowerCase().includes(s));
   const sv=document.getElementById('srt').value;
@@ -500,15 +504,23 @@ function renderTable(){
   </tr>`;}).join('');
 }
 function showDetail(id){
-  const r=allRows.find(x=>x.zipID===id);if(!r)return;
-  document.getElementById('dtitle').textContent=`Alumno ${id} — ${r.earned}/${r.possible} (${r.pct.toFixed(1)}%)`;
-  document.getElementById('agrid').innerHTML=r.answers.map(a=>`<div class="acell ${a.earned?'ok':'er'}"><div class="qn">P${a.n}</div><div class="st">${a.stu||'–'}</div><div class="ky">${a.key}</div></div>`).join('');
+  const raw=allRows.find(x=>x.zipID===id);if(!raw)return;
+  const r={...raw,...calcEffective(raw)};
+  const excl=getExcludedNums();
+  document.getElementById('dtitle').textContent=`Alumno ${id} — ${r.earned}/${r.possible} (${r.pct.toFixed(1)}%)${excludedItems.length?' [excl. '+excludedItems.length+' react.]':''}`;
+  document.getElementById('agrid').innerHTML=raw.answers.map(a=>{
+    if(excl.has(a.n)){
+      return`<div class="acell" style="opacity:.35;border-style:dashed" title="Excluido"><div class="qn">P${a.n}</div><div class="st" style="color:var(--text3)">—</div><div class="ky">excl.</div></div>`;
+    }
+    return`<div class="acell ${a.earned?'ok':'er'}"><div class="qn">P${a.n}</div><div class="st">${a.stu||'–'}</div><div class="ky">${a.key}</div></div>`;
+  }).join('');
   document.getElementById('dpanel').classList.add('open');
   document.getElementById('dpanel').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function renderCharts(){
+  const rows=withEffective(filtRows);
   const bins=Array.from({length:10},(_,i)=>({l:`${i*10}–${i===9?'100':i*10+9}%`,c:0}));
-  filtRows.forEach(r=>{const bi=Math.min(9,Math.floor(r.pct/10));bins[bi].c++;});
+  rows.forEach(r=>{const bi=Math.min(9,Math.floor(r.pct/10));bins[bi].c++;});
   const mc=Math.max(...bins.map(b=>b.c))||1;
   document.getElementById('distC').innerHTML=bins.map(b=>{
     const w=(b.c/mc*100).toFixed(1);const pv=parseInt(b.l);
@@ -516,28 +528,50 @@ function renderCharts(){
     return`<div class="brow"><div class="blbl">${b.l}</div><div class="btrack"><div class="bfill" style="width:${w}%;background:${col}">${b.c||''}</div></div><div class="bcnt">${b.c}</div></div>`;
   }).join('');
   const rngs=[{l:'90–100%',mn:90,mx:101,c:'#16a34a'},{l:'70–89%',mn:70,mx:90,c:'#2563eb'},{l:'60–69%',mn:60,mx:70,c:'#ca8a04'},{l:'50–59%',mn:50,mx:60,c:'#ea580c'},{l:'< 50%',mn:0,mx:50,c:'#dc2626'}];
-  const tot=filtRows.length||1;
+  const tot=rows.length||1;
   document.getElementById('rngC').innerHTML=rngs.map(rng=>{
-    const cnt=filtRows.filter(r=>r.pct>=rng.mn&&r.pct<rng.mx).length;
+    const cnt=rows.filter(r=>r.pct>=rng.mn&&r.pct<rng.mx).length;
     return`<div class="brow"><div class="blbl">${rng.l}</div><div class="btrack"><div class="bfill" style="width:${(cnt/tot*100).toFixed(1)}%;background:${rng.c}">${cnt||''}</div></div><div class="bcnt">${cnt}</div></div>`;
   }).join('');
   renderSecAvgChart();
 }
 function renderSecAvgChart(){
+  const excl=getExcludedNums();
   if(!sections.length){document.getElementById('secAvgC').innerHTML='<p style="color:var(--text3);font-size:11px">Agrega secciones para ver promedios.</p>';return;}
   document.getElementById('secAvgC').innerHTML=sections.map(sec=>{
     let te=0,tp=0;
-    filtRows.forEach(r=>{const ans=r.answers.filter(a=>a.n>=sec.from&&a.n<=sec.to);te+=ans.reduce((s,a)=>s+a.earned,0);tp+=ans.length;});
+    filtRows.forEach(r=>{
+      const ans=r.answers.filter(a=>a.n>=sec.from&&a.n<=sec.to&&!excl.has(a.n));
+      te+=ans.reduce((s,a)=>s+a.earned,0);tp+=ans.length;
+    });
     const avg=tp?(te/tp*100):0;
     return`<div class="brow"><div class="blbl" style="color:${sec.col};width:110px">${sec.name}</div><div class="btrack"><div class="bfill" style="width:${avg}%;background:${sec.col}">${avg.toFixed(1)}%</div></div></div>`;
   }).join('');
 }
 function renderItems(){
   if(!filtRows.length)return;
+  const excl=getExcludedNums();
   const possible=Math.max(...filtRows.map(r=>r.possible));
   const cols={hi:'#16a34a',md:'#ca8a04',lo:'#dc2626'};
-  document.getElementById('itemC').innerHTML=Array.from({length:possible},(_,i)=>{
+  // Banner for excluded items
+  const banner=exclBanner();
+  document.getElementById('itemC').innerHTML=''; // clear first
+  const container=document.getElementById('itemC');
+  container.closest('.cwrap').querySelector('h3').insertAdjacentHTML('afterend',
+    `<div id="exclBannerSlot">${banner}</div>`);
+  // Remove duplicate banners
+  const banners=document.querySelectorAll('#exclBannerSlot');
+  banners.forEach((b,i)=>{if(i>0)b.remove();});
+
+  container.innerHTML=Array.from({length:possible},(_,i)=>{
     const n=i+1;
+    if(excl.has(n)){
+      const ex=excludedItems.find(e=>e.n===n);
+      return`<div title="P${n} EXCLUIDO: ${ex?.comment||'sin comentario'}" style="opacity:.3;border:2px dashed var(--accent2);border-radius:6px;text-align:center;padding:6px 4px;position:relative">
+        <div style="font-size:9px;color:var(--accent2)">P${n}</div>
+        <div style="font-size:9px;color:var(--accent2)">excl.</div>
+      </div>`;
+    }
     const total=filtRows.filter(r=>r.answers.find(a=>a.n===n)).length;
     const correct=filtRows.reduce((s,r)=>{const a=r.answers.find(a=>a.n===n);return s+(a?a.earned:0);},0);
     const pct=total?(correct/total*100):0;const c=pc(pct);
@@ -568,8 +602,9 @@ function addSec(){
 function rmSec(i){sections.splice(i,1);renderSecs();if(allRows.length)refreshSecs();}
 function refreshSecs(){renderSecTable();renderSecAvgChart();}
 function getSecData(row){
+  const excl=getExcludedNums();
   return sections.map(sec=>{
-    const ans=row.answers.filter(a=>a.n>=sec.from&&a.n<=sec.to);
+    const ans=row.answers.filter(a=>a.n>=sec.from&&a.n<=sec.to&&!excl.has(a.n));
     const e=ans.reduce((s,a)=>s+a.earned,0);const t=ans.length;
     return{name:sec.name,pct:t?(e/t*100):0,earned:e,total:t,from:sec.from,to:sec.to,col:sec.col};
   });
@@ -580,14 +615,16 @@ function renderSecTable(){
     th.innerHTML='';tb.innerHTML=`<tr><td colspan="2" style="text-align:center;padding:22px;color:var(--text3);font-size:12px">${!sections.length?'Configura secciones':'Sin datos'}</td></tr>`;return;
   }
   th.innerHTML=`<tr><th>ZipGradeID</th><th>% Global</th>${sections.map(s=>`<th style="color:${s.col}">${s.name}<br><span style="font-size:9px;color:var(--text3)">P${s.from}–P${s.to}</span></th>`).join('')}</tr>`;
+  const excl=getExcludedNums();
   tb.innerHTML=filtRows.map(r=>{
+    const eff=calcEffective(r);
     const sc=sections.map(sec=>{
-      const ans=r.answers.filter(a=>a.n>=sec.from&&a.n<=sec.to);
+      const ans=r.answers.filter(a=>a.n>=sec.from&&a.n<=sec.to&&!excl.has(a.n));
       const e=ans.reduce((s,a)=>s+a.earned,0);const t=ans.length;const p=t?(e/t*100):0;const c=pc(p);
       return`<td><div class="pbar"><div class="ptrack"><div class="pfill ${c}" style="width:${p}%"></div></div><span class="plbl ${c}">${p.toFixed(1)}%</span></div><div style="font-size:9px;color:var(--text3);margin-top:2px">${e}/${t}</div></td>`;
     }).join('');
-    const c=pc(r.pct);
-    return`<tr><td><span class="badge">${r.zipID}</span></td><td><span class="plbl ${c}">${r.pct.toFixed(1)}%</span></td>${sc}</tr>`;
+    const c=pc(eff.pct);
+    return`<tr><td><span class="badge">${r.zipID}</span></td><td><span class="plbl ${c}">${eff.pct.toFixed(1)}%</span></td>${sc}</tr>`;
   }).join('');
 }
 
@@ -599,7 +636,8 @@ function applyFilters(){
   const mxV=isNaN(pMax)?100:pMax;
   filtRows=allRows.filter(r=>{
     if(idF&&!r.zipID.includes(idF))return false;
-    if(r.pct<pMin||r.pct>mxV)return false;
+    const eff=calcEffective(r);
+    if(eff.pct<pMin||eff.pct>mxV)return false;
     return true;
   });
   if(allRows.length){renderStats();renderTable();renderCharts();renderItems();renderSecTable();}
@@ -680,11 +718,9 @@ async function generatePDF(){
 
   function checkY(n){if(y+n>283){doc.addPage();y=14;}}
 
-  // ── Page header (light blue stripe, white text)
+  // ── Page header
   function pageHdr(title,sub=''){
-    // thin accent line top
     doc.setFillColor(...C.pageHdr);pr(doc,0,0,210,6,'F');
-    // light bg band
     doc.setFillColor(239,246,255);pr(doc,0,6,210,20,'F');
     doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(...C.text);
     doc.text('PIMLA — Reporte de Evaluación',M,15);
@@ -693,7 +729,10 @@ async function generatePDF(){
     if(sub){doc.setFontSize(7.5);doc.setTextColor(...C.text3);doc.text(sub,M,26);}
     doc.setFontSize(7.5);doc.setTextColor(...C.text3);
     doc.text(`Generado: ${new Date().toLocaleString('es-MX')}`,W-M,15,{align:'right'});
-    // divider
+    if(excludedItems.length){
+      doc.setTextColor(...C.red);
+      doc.text(`Reactivos excluidos: ${excludedItems.map(e=>'P'+e.n).join(', ')}`,W-M,21,{align:'right'});
+    }
     doc.setDrawColor(...C.border);doc.setLineWidth(0.4);doc.line(M,27,W-M,27);
     y=31;doc.setTextColor(...C.text);
   }
@@ -786,18 +825,35 @@ async function generatePDF(){
   //  GENERAL REPORT
   // ═══════════════════════
   if(rtype==='general'||rtype==='ambos'){
-    pageHdr('Reporte General del Grupo',`Total de alumnos: ${filtRows.length}  |  Reactivos: ${filtRows.length?Math.max(...filtRows.map(r=>r.possible)):0}`);
+    pageHdr('Reporte General del Grupo',`Total de alumnos: ${filtRows.length}  |  Reactivos: ${filtRows.length?Math.max(...filtRows.map(r=>r.possible)):0}${excludedItems.length?'  |  Excluidos: '+excludedItems.length:''}`);
     setProgress(8,'Resumen ejecutivo…');
+
+    // Excluded items note in PDF
+    if(excludedItems.length){
+      checkY(12+excludedItems.length*4);
+      doc.setFillColor(...C.lred);rr(doc,M,y,W-2*M,6,1,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...C.red);
+      doc.text(`Reactivos excluidos del calculo (${excludedItems.length}):`,M+2,y+4.2);y+=8;
+      excludedItems.forEach(e=>{
+        checkY(5);
+        doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...C.text);
+        const txt=`  P${e.n}: ${e.comment||'Sin comentario'}`;
+        const wl=doc.splitTextToSize(txt,W-2*M-4);
+        doc.text(wl,M,y);y+=wl.length*4.5;
+      });
+      y+=3;
+    }
 
     if(doRes){
       secTtl('Resumen Ejecutivo');
       const t=filtRows.length;
-      const avg=t?(filtRows.reduce((s,r)=>s+r.pct,0)/t):0;
-      const pass=filtRows.filter(r=>r.pct>=60).length;
+      const effRows=filtRows.map(r=>({...r,...calcEffective(r)}));
+      const avg=t?(effRows.reduce((s,r)=>s+r.pct,0)/t):0;
+      const pass=effRows.filter(r=>r.pct>=60).length;
       const fail=t-pass;
-      const mx=t?Math.max(...filtRows.map(r=>r.pct)):0;
-      const mn=t?Math.min(...filtRows.map(r=>r.pct)):0;
-      const sorted2=[...filtRows].sort((a,b)=>a.pct-b.pct);
+      const mx=t?Math.max(...effRows.map(r=>r.pct)):0;
+      const mn=t?Math.min(...effRows.map(r=>r.pct)):0;
+      const sorted2=[...effRows].sort((a,b)=>a.pct-b.pct);
       const med=t?sorted2[Math.floor(t/2)].pct:0;
       statBoxes([
         {lbl:'Total Alumnos',val:t,lc:C.lblue,dc:C.blue},
@@ -818,7 +874,7 @@ async function generatePDF(){
     setProgress(20,'Tabla de alumnos…');
     if(doTbl){
       secTtl('Tabla de Alumnos (ordenada por calificación)');
-      const rows=[...filtRows].sort((a,b)=>b.pct-a.pct);
+      const rows=[...filtRows].map(r=>({...r,...calcEffective(r)})).sort((a,b)=>b.pct-a.pct);
       y=pdfTable(['#','ZipGradeID','Aciertos','Total','% Correcto','Version'],
         rows.map((r,i)=>[i+1,r.zipID,r.earned,r.possible,r.pct.toFixed(1)+'%',r.kv||'—']),
         [10,42,24,20,36,26],y,{cc:[4]})+2;
@@ -828,8 +884,9 @@ async function generatePDF(){
     if(doDst){
       checkY(80);
       secTtl('Distribución de Calificaciones');
+      const effRowsDst=filtRows.map(r=>({...r,...calcEffective(r)}));
       const bins=Array.from({length:10},(_,i)=>({l:`${i*10}–${i===9?'100':i*10+9}%`,c:0}));
-      filtRows.forEach(r=>{const bi=Math.min(9,Math.floor(r.pct/10));bins[bi].c++;});
+      effRowsDst.forEach(r=>{const bi=Math.min(9,Math.floor(r.pct/10));bins[bi].c++;});
       const mc=Math.max(...bins.map(b=>b.c))||1;
       const bw=W-2*M-46;
       [...bins].reverse().forEach(b=>{
@@ -846,36 +903,37 @@ async function generatePDF(){
         {l:'Deficiente  50–59%',mn:50,mx2:60,col:C.orange},
         {l:'Insuficiente  <50%',mn:0,mx2:50,col:C.red},
       ];
-      const tot2=filtRows.length||1;
+      const tot2=effRowsDst.length||1;
       checkY(rngs2.length*7+6);
       doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...C.text);
       doc.text('Resumen por nivel de desempeño:',M,y);y+=5;
       rngs2.forEach(rng=>{
         checkY(7);
-        const cnt=filtRows.filter(r=>r.pct>=rng.mn&&r.pct<rng.mx2).length;
+        const cnt=effRowsDst.filter(r=>r.pct>=rng.mn&&r.pct<rng.mx2).length;
         hBar(M,y,W-2*M,(cnt/tot2)*100,rng.col,`${rng.l}  —  ${cnt} (${(cnt/tot2*100).toFixed(1)}%)`,56);y+=6.5;
       });
       y+=5;
     }
 
     setProgress(52,'Secciones…');
+    const exclPDF=getExcludedNums();
     if(doSec&&sections.length){
       checkY(20);
       secTtl('Promedios por Sección / Materia');
       sections.forEach(sec=>{
         let te=0,tp=0;
-        filtRows.forEach(r=>{const ans=r.answers.filter(a=>a.n>=sec.from&&a.n<=sec.to);te+=ans.reduce((s,a)=>s+a.earned,0);tp+=ans.length;});
+        filtRows.forEach(r=>{const ans=r.answers.filter(a=>a.n>=sec.from&&a.n<=sec.to&&!exclPDF.has(a.n));te+=ans.reduce((s,a)=>s+a.earned,0);tp+=ans.length;});
         const avg=tp?(te/tp*100):0;
         checkY(7);hBar(M,y,W-2*M-2,avg,h2r(sec.col),`${sec.name} (P${sec.from}–P${sec.to})`,46);y+=7;
       });
       y+=4;
-      // Section individual table
       checkY(20);
       doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...C.text);
       doc.text('Calificaciones individuales por sección:',M,y);y+=5;
       const sw=Math.min(24,Math.floor((W-2*M-58)/Math.max(1,sections.length)));
+      const secEff=filtRows.map(r=>({...r,...calcEffective(r)}));
       y=pdfTable(['ZipGradeID','% Global',...sections.map(s=>s.name.substring(0,9))],
-        filtRows.map(r=>[r.zipID,r.pct.toFixed(1)+'%',...getSecData(r).map(s=>s.pct.toFixed(1)+'%')]),
+        secEff.map(r=>[r.zipID,r.pct.toFixed(1)+'%',...getSecData(r).map(s=>s.pct.toFixed(1)+'%')]),
         [34,24,...sections.map(()=>sw)],y,{cc:Array.from({length:sections.length+1},(_,i)=>i+1)})+3;
     }
 
@@ -883,25 +941,39 @@ async function generatePDF(){
     if(doRea){
       checkY(24);
       secTtl('Análisis de Reactivos — Índice de Dificultad');
-      const items=getItems();
-      if(items.length){
-        // mini grid
+      const items=getItems(); // getItems already respects excluded via getExcludedNums below
+      // Rebuild items excluding excluded nums
+      const itemsFull=filtRows.length?Array.from({length:Math.max(...filtRows.map(r=>r.possible))},(_,i)=>{
+        const n=i+1;
+        if(exclPDF.has(n))return{n,pct:-1,correct:0,total:0,excluded:true};
+        const total=filtRows.filter(r=>r.answers.find(a=>a.n===n)).length;
+        const correct=filtRows.reduce((s,r)=>{const a=r.answers.find(a=>a.n===n);return s+(a?a.earned:0);},0);
+        return{n,pct:total?(correct/total*100):0,correct,total,excluded:false};
+      }):[];
+      if(itemsFull.length){
         const cw2=10.5,ch2=10,prR=Math.floor((W-2*M)/(cw2+1));
         let cx=M,iy=y;
-        items.forEach((it,idx)=>{
+        itemsFull.forEach((it,idx)=>{
           if(idx>0&&idx%prR===0){cx=M;iy+=ch2+2;checkY(ch2+4);}
-          const col=it.pct>=70?C.green:it.pct>=50?C.yellow:C.red;
-          const lc=it.pct>=70?C.lgreen:it.pct>=50?C.lyellow:C.lred;
-          doc.setFillColor(...lc);rr(doc,cx,iy,cw2,ch2,1,'F');
-          doc.setDrawColor(...col);doc.setLineWidth(0.3);rr(doc,cx,iy,cw2,ch2,1,'S');
-          doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...C.text3);
-          doc.text(`P${it.n}`,cx+cw2/2,iy+3.5,{align:'center'});
-          doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(...col);
-          doc.text(`${it.pct.toFixed(0)}%`,cx+cw2/2,iy+8.2,{align:'center'});
+          if(it.excluded){
+            doc.setFillColor(250,240,240);rr(doc,cx,iy,cw2,ch2,1,'F');
+            doc.setDrawColor(...C.red);doc.setLineWidth(0.3);rr(doc,cx,iy,cw2,ch2,1,'S');
+            doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...C.red);
+            doc.text(`P${it.n}`,cx+cw2/2,iy+3.5,{align:'center'});
+            doc.text('excl',cx+cw2/2,iy+8,{align:'center'});
+          }else{
+            const col=it.pct>=70?C.green:it.pct>=50?C.yellow:C.red;
+            const lc=it.pct>=70?C.lgreen:it.pct>=50?C.lyellow:C.lred;
+            doc.setFillColor(...lc);rr(doc,cx,iy,cw2,ch2,1,'F');
+            doc.setDrawColor(...col);doc.setLineWidth(0.3);rr(doc,cx,iy,cw2,ch2,1,'S');
+            doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...C.text3);
+            doc.text(`P${it.n}`,cx+cw2/2,iy+3.5,{align:'center'});
+            doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(...col);
+            doc.text(`${it.pct.toFixed(0)}%`,cx+cw2/2,iy+8.2,{align:'center'});
+          }
           cx+=cw2+1;
         });
         y=iy+ch2+8;
-        // legend
         checkY(8);
         [[C.green,'70–100% Aceptable'],[C.yellow,'50–69% Moderado'],[C.red,'0–49% Dificultad alta']].forEach((l,i)=>{
           doc.setFillColor(...l[0]);rr(doc,M+i*58,y,4,4,0.5,'F');
@@ -909,13 +981,12 @@ async function generatePDF(){
           doc.text(l[1],M+i*58+6,y+3.2);
         });
         y+=8;
-        // hard / easy lists side by side
-        const sortedI=[...items].sort((a,b)=>a.pct-b.pct);
+        const activeItems=itemsFull.filter(it=>!it.excluded);
+        const sortedI=[...activeItems].sort((a,b)=>a.pct-b.pct);
         const hard=sortedI.slice(0,Math.min(5,sortedI.length));
         const easy=[...sortedI].reverse().slice(0,Math.min(5,sortedI.length));
         checkY(42);
         const hw=(W-2*M-6)/2;
-        // hard
         doc.setFillColor(...C.lred);rr(doc,M,y,hw,6,1,'F');
         doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...C.red);
         doc.text('Mayor dificultad (menos aciertos):',M+2,y+4);
@@ -924,15 +995,14 @@ async function generatePDF(){
           doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.text);
           doc.text(`  P${it.n}: ${it.pct.toFixed(1)}%  (${it.correct}/${it.total})`,M,ly);ly+=5;
         });
-        // easy
-        const ex=M+hw+6;
-        doc.setFillColor(...C.lgreen);rr(doc,ex,y,hw,6,1,'F');
+        const ex2=M+hw+6;
+        doc.setFillColor(...C.lgreen);rr(doc,ex2,y,hw,6,1,'F');
         doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...C.green);
-        doc.text('Mejor desempeño:',ex+2,y+4);
+        doc.text('Mejor desempeño:',ex2+2,y+4);
         let ly2=y+8;
         easy.forEach(it=>{
           doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.text);
-          doc.text(`  P${it.n}: ${it.pct.toFixed(1)}%  (${it.correct}/${it.total})`,ex,ly2);ly2+=5;
+          doc.text(`  P${it.n}: ${it.pct.toFixed(1)}%  (${it.correct}/${it.total})`,ex2,ly2);ly2+=5;
         });
         y=Math.max(ly,ly2)+4;
       }
@@ -942,12 +1012,11 @@ async function generatePDF(){
     if(doTop){
       checkY(20);
       secTtl('Top 10 — Mejores y Mayor Dificultad');
-      const sg=[...filtRows].sort((a,b)=>b.pct-a.pct);
-      const top10=sg.slice(0,Math.min(10,sg.length));
-      const bot10=[...sg].reverse().slice(0,Math.min(10,sg.length));
+      const sgEff=filtRows.map(r=>({...r,...calcEffective(r)})).sort((a,b)=>b.pct-a.pct);
+      const top10=sgEff.slice(0,Math.min(10,sgEff.length));
+      const bot10=[...sgEff].reverse().slice(0,Math.min(10,sgEff.length));
       checkY(top10.length*6+30);
       const hw2=(W-2*M-6)/2;
-      // top
       doc.setFillColor(...C.lgreen);rr(doc,M,y,hw2,6,1,'F');
       doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...C.green);
       doc.text('Mejores calificaciones',M+2,y+4);
@@ -958,7 +1027,6 @@ async function generatePDF(){
         doc.setFont('helvetica','bold');doc.setTextColor(...C.green);
         doc.text(r.pct.toFixed(1)+'%',M+hw2-5,ty2,{align:'right'});ty2+=5;
       });
-      // bottom
       const bx2=M+hw2+6;
       doc.setFillColor(...C.lred);rr(doc,bx2,y,hw2,6,1,'F');
       doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...C.red);
@@ -979,20 +1047,19 @@ async function generatePDF(){
   // ═══════════════════════
   if((rtype==='individual'||rtype==='ambos')&&selStu.length){
     const stuRows=filtRows.filter(r=>selStu.includes(r.zipID));
-    stuRows.forEach((r,si)=>{
+    stuRows.forEach((rawR,si)=>{
+      const r={...rawR,...calcEffective(rawR)};
       setProgress(80+Math.round(18*(si/stuRows.length)),`Alumno ${si+1}/${stuRows.length}…`);
       doc.addPage();y=0;
-      pageHdr(`Reporte Individual — Alumno ${r.zipID}`,`Clave: ${r.kv||'N/A'}  |  ${r.earned}/${r.possible} aciertos`);
+      pageHdr(`Reporte Individual — Alumno ${r.zipID}`,`Clave: ${r.kv||'N/A'}  |  ${r.earned}/${r.possible} aciertos efectivos`);
 
-      // Stat boxes
       statBoxes([
-        {lbl:'Aciertos',val:`${r.earned}/${r.possible}`,lc:C.lblue,dc:C.blue},
+        {lbl:'Aciertos (ef.)',val:`${r.earned}/${r.possible}`,lc:C.lblue,dc:C.blue},
         {lbl:'% Correcto',val:r.pct.toFixed(1)+'%',lc:r.pct>=70?C.lgreen:r.pct>=60?C.lyellow:C.lred,dc:r.pct>=70?C.green:r.pct>=60?C.yellow:C.red},
         {lbl:'Errores',val:r.possible-r.earned,lc:C.lred,dc:C.red},
         {lbl:'Resultado',val:r.pct>=60?'APROBADO':'REPROBADO',lc:r.pct>=60?C.lgreen:C.lred,dc:r.pct>=60?C.green:C.red},
       ]);
 
-      // Global bar
       checkY(12);
       doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...C.text);
       doc.text('Desempeño global:',M,y);y+=4;
@@ -1005,40 +1072,47 @@ async function generatePDF(){
       doc.text(r.pct.toFixed(1)+'%',M+fw+2,y+4.8);
       y+=11;
 
-      // Sections
       if(sections.length){
         secTtl('Desempeño por Sección / Materia');
-        getSecData(r).forEach(s=>{
+        getSecData(rawR).forEach(s=>{
           checkY(8);hBar(M,y,W-2*M-2,s.pct,h2r(s.col),`${s.name}  ${s.earned}/${s.total}`,46);y+=7;
         });y+=4;
       }
 
-      // Answer grid
       secTtl('Respuestas Detalladas  (Alumno / Clave correcta)');
       const cw3=11,ch3=10,pR3=Math.floor((W-2*M)/(cw3+1));
       let cx3=M,iy3=y;
-      r.answers.forEach((a,idx)=>{
+      rawR.answers.forEach((a,idx)=>{
         if(idx>0&&idx%pR3===0){cx3=M;iy3+=ch3+2;checkY(ch3+4);}
-        const col=a.earned?C.green:C.red;const lc=a.earned?C.lgreen:C.lred;
-        doc.setFillColor(...lc);rr(doc,cx3,iy3,cw3,ch3,1,'F');
-        doc.setDrawColor(...col);doc.setLineWidth(0.3);rr(doc,cx3,iy3,cw3,ch3,1,'S');
-        doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...C.text3);
-        doc.text(`P${a.n}`,cx3+cw3/2,iy3+2.8,{align:'center'});
-        doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...col);
-        doc.text(a.stu||'–',cx3+cw3/2,iy3+6.5,{align:'center'});
-        doc.setFont('helvetica','normal');doc.setFontSize(5);doc.setTextColor(...C.text3);
-        doc.text(a.key,cx3+cw3/2,iy3+9.2,{align:'center'});
+        if(exclPDF.has(a.n)){
+          doc.setFillColor(250,245,245);rr(doc,cx3,iy3,cw3,ch3,1,'F');
+          doc.setDrawColor(...C.red);doc.setLineWidth(0.3);rr(doc,cx3,iy3,cw3,ch3,1,'S');
+          doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...C.text3);
+          doc.text(`P${a.n}`,cx3+cw3/2,iy3+3.5,{align:'center'});
+          doc.setFontSize(5);doc.setTextColor(...C.red);
+          doc.text('excl.',cx3+cw3/2,iy3+8,{align:'center'});
+        }else{
+          const col=a.earned?C.green:C.red;const lc=a.earned?C.lgreen:C.lred;
+          doc.setFillColor(...lc);rr(doc,cx3,iy3,cw3,ch3,1,'F');
+          doc.setDrawColor(...col);doc.setLineWidth(0.3);rr(doc,cx3,iy3,cw3,ch3,1,'S');
+          doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...C.text3);
+          doc.text(`P${a.n}`,cx3+cw3/2,iy3+2.8,{align:'center'});
+          doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...col);
+          doc.text(a.stu||'–',cx3+cw3/2,iy3+6.5,{align:'center'});
+          doc.setFont('helvetica','normal');doc.setFontSize(5);doc.setTextColor(...C.text3);
+          doc.text(a.key,cx3+cw3/2,iy3+9.2,{align:'center'});
+        }
         cx3+=cw3+1;
       });
       y=iy3+ch3+7;
 
-      // Wrong answers
-      const wrong=r.answers.filter(a=>!a.earned);
+      // Wrong answers (only from active answers)
+      const wrong=rawR.answers.filter(a=>!a.earned&&!exclPDF.has(a.n));
       if(wrong.length){
         checkY(18);
         doc.setFillColor(...C.lred);rr(doc,M,y,W-2*M,6,1,'F');
         doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...C.red);
-        doc.text(`Reactivos con error (${wrong.length} de ${r.possible}):`,M+2,y+4.2);y+=8;
+        doc.text(`Reactivos con error (${wrong.length} de ${r.possible} efectivos):`,M+2,y+4.2);y+=8;
         const groups=[];let g=[];
         wrong.forEach(a=>{g.push(`P${a.n}:${a.stu||'-'}>${a.key}`);if(g.length===8){groups.push(g);g=[];}});
         if(g.length)groups.push(g);
@@ -1079,7 +1153,7 @@ function openModal(){
   document.getElementById('pbwrap').style.display='none';document.getElementById('pdfMsg').style.display='none';
 }
 function populateStu(){
-  const sl=[...filtRows].sort((a,b)=>b.pct-a.pct);
+  const sl=[...filtRows].map(r=>({...r,...calcEffective(r)})).sort((a,b)=>b.pct-a.pct);
   document.getElementById('stuList').innerHTML=sl.map(r=>`<label><input type="checkbox" value="${r.zipID}" checked><span>${r.zipID} — ${r.pct.toFixed(1)}% (${r.earned}/${r.possible})</span></label>`).join('');
 }
 document.getElementById('stuSearch').addEventListener('input',function(){
@@ -1112,6 +1186,19 @@ document.getElementById('srt').addEventListener('change',renderTable);
 document.getElementById('btnAddSec').addEventListener('click',addSec);
 document.getElementById('btnCSV').addEventListener('click',exportCSV);
 document.getElementById('btnCSVSec').addEventListener('click',exportSecCSV);
+
+// ── EXCLUDED ITEMS EVENTS
+document.getElementById('btnAddExcl').addEventListener('click', addExcl);
+document.getElementById('exclNum').addEventListener('keydown', e=>{ if(e.key==='Enter') addExcl(); });
+document.getElementById('btnConfirmExcl').addEventListener('click', confirmExcl);
+document.getElementById('btnCancelExcl').addEventListener('click', ()=>{
+  pendingExclN=null;
+  document.getElementById('exclModal').classList.remove('open');
+});
+document.getElementById('exclModal').addEventListener('click', function(e){
+  if(e.target===this){ pendingExclN=null; this.classList.remove('open'); }
+});
+
 const dz=document.getElementById('dz'),fi=document.getElementById('fi');
 dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
 dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
@@ -1137,7 +1224,7 @@ function showToast(msg,err=false){
   t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);
 }
 renderSecs();
+renderExclList();
 </script>
 </body>
 </html>
-
