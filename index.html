@@ -3,22 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Suite de Generación de Exámenes</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
-
+<title>Suite de Exámenes Profesional</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#0f172a;
-  --card:#1e293b;
+  --surface:#1e293b;
+  --surface2:#162032;
+  --deep:#020617;
   --accent:#38bdf8;
-  --accent2:#0ea5e9;
+  --accent-dim:rgba(56,189,248,.12);
+  --accent-border:rgba(56,189,248,.25);
   --text:#e2e8f0;
   --muted:#64748b;
+  --border:#1e293b;
+  --border2:#334155;
 }
-
 *{margin:0;padding:0;box-sizing:border-box;}
-
 body{
   font-family:'Sora',sans-serif;
   background:var(--bg);
@@ -26,184 +27,637 @@ body{
   height:100vh;
   display:flex;
   flex-direction:column;
+  overflow:hidden;
 }
 
-/* HEADER */
-header{
-  padding:16px 28px;
+/* ── MOBILE OVERLAY ── */
+#mobileOverlay{
+  display:none;
+  position:fixed;
+  inset:0;
   background:#020617;
-  border-bottom:1px solid #1e293b;
+  z-index:9999;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:32px 24px;
+  text-align:center;
+  gap:20px;
+}
+#mobileOverlay.show{ display:flex; }
+.mob-icon{
+  width:64px;height:64px;border-radius:18px;
+  background:var(--accent-dim);
+  border:1px solid var(--accent-border);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.mob-badge{
+  background:rgba(251,191,36,.12);
+  border:1px solid rgba(251,191,36,.3);
+  color:#fbbf24;
+  font-size:11px;
+  padding:4px 12px;border-radius:99px;
+  letter-spacing:.06em;
+}
+.mob-title{ font-size:22px;font-weight:600;color:var(--text);line-height:1.2; }
+.mob-desc{ font-size:14px;color:var(--muted);line-height:1.65;max-width:320px; }
+.mob-continue{
+  margin-top:8px;
+  padding:10px 24px;
+  border-radius:10px;
+  border:1px solid var(--border2);
+  background:var(--surface);
+  color:var(--muted);
+  font-family:'Sora',sans-serif;
+  font-size:12px;
+  cursor:pointer;
+  transition:.2s;
+}
+.mob-continue:hover{ color:var(--text); }
+
+/* ── TOPBAR ── */
+header{
+  padding:12px 24px;
+  background:var(--deep);
+  border-bottom:1px solid var(--border);
   display:flex;
   justify-content:space-between;
   align-items:center;
+  flex-shrink:0;
+}
+.brand{ display:flex;align-items:center;gap:10px; }
+.brand-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--accent);
+  box-shadow:0 0 0 3px rgba(56,189,248,.15);
+}
+header h1{ font-size:13px;font-weight:500;letter-spacing:.05em; }
+.header-pills{ display:flex;gap:6px; }
+.pill{
+  font-size:10px;padding:3px 8px;border-radius:99px;
+  border:1px solid var(--border2);color:var(--muted);
 }
 
-header h1{
-  font-size:16px;
-  letter-spacing:.08em;
-}
-
-header span{
-  font-size:12px;
-  color:var(--muted);
-}
-
-/* MAIN */
+/* ── LAYOUT ── */
 main{
   flex:1;
   display:flex;
   overflow:hidden;
 }
 
-/* SIDEBAR */
+/* ── SIDEBAR ── */
 .sidebar{
-  width:260px;
-  background:#020617;
-  border-right:1px solid #1e293b;
-  padding:20px;
-}
-
-.menu-title{
-  font-size:11px;
-  color:var(--muted);
-  margin-bottom:12px;
-  text-transform:uppercase;
-  letter-spacing:.1em;
-}
-
-.menu{
+  width:224px;
+  background:var(--deep);
+  border-right:1px solid var(--border);
+  padding:18px 12px;
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:2px;
+  overflow-y:auto;
+  flex-shrink:0;
+}
+.sidebar-section{
+  margin-bottom:18px;
+}
+.sidebar-label{
+  font-size:9px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.12em;
+  padding:0 8px;margin-bottom:8px;
+}
+.nav-btn{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:8px;
+  cursor:pointer;border:none;background:transparent;
+  color:#94a3b8;font-size:12px;font-family:'Sora',sans-serif;
+  text-align:left;width:100%;transition:background .15s,color .15s;
+  position:relative;
+}
+.nav-btn:hover{ background:var(--surface);color:var(--text); }
+.nav-btn.active{ background:#0f3460;color:var(--accent); }
+.nav-btn.active::before{
+  content:'';
+  position:absolute;left:0;top:20%;bottom:20%;
+  width:2px;border-radius:99px;background:var(--accent);
+}
+.nav-icon{ width:15px;height:15px;flex-shrink:0;opacity:.65; }
+.nav-btn.active .nav-icon{ opacity:1; }
+.back-btn{
+  display:none;align-items:center;gap:6px;
+  padding:8px 10px;border-radius:8px;
+  cursor:pointer;border:none;background:transparent;
+  color:var(--muted);font-size:12px;font-family:'Sora',sans-serif;
+  margin-bottom:10px;width:100%;transition:color .15s,background .15s;
+}
+.back-btn:hover{ color:var(--text);background:var(--surface); }
+.back-btn.visible{ display:flex; }
+
+/* ── ZipGrade sidebar footer ── */
+.sidebar-footer{
+  margin-top:auto;
+  padding-top:14px;
+  border-top:1px solid var(--border);
+}
+.zipbtn{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 10px;border-radius:8px;
+  cursor:pointer;border:none;
+  background:transparent;
+  color:var(--muted);font-size:11px;
+  font-family:'Sora',sans-serif;
+  text-align:left;width:100%;transition:.15s;
+}
+.zipbtn:hover{ background:var(--surface);color:var(--text); }
+.zipbtn.active{ background:#0f3460;color:var(--accent); }
+.zipbtn.active::before{
+  content:'';position:absolute;left:0;top:20%;bottom:20%;
+  width:2px;border-radius:99px;background:var(--accent);
+}
+.zip-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:#4ade80;flex-shrink:0;
 }
 
-.menu button{
-  background:var(--card);
-  border:1px solid #334155;
-  color:var(--text);
-  padding:12px;
-  border-radius:10px;
-  cursor:pointer;
-  text-align:left;
-  transition:.2s;
-}
-
-.menu button:hover{
-  border-color:var(--accent);
-  color:var(--accent);
-}
-
-.menu button.active{
-  background:var(--accent);
-  color:#020617;
-  border-color:var(--accent);
-}
-
-/* CONTENT */
+/* ── CONTENT ── */
 .content{
   flex:1;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
   position:relative;
 }
 
-iframe{
-  width:100%;
-  height:100%;
-  border:none;
-}
-
-/* WELCOME */
-.welcome{
-  position:absolute;
-  inset:0;
+/* ── WELCOME / HOME ── */
+.home-area{
+  flex:1;
   display:flex;
-  align-items:center;
-  justify-content:center;
   flex-direction:column;
+  overflow-y:auto;
+  padding:28px 28px 20px;
+  gap:24px;
+}
+.home-hero{
+  display:flex;align-items:center;gap:16px;
+}
+.hero-icon{
+  width:48px;height:48px;border-radius:14px;
+  background:var(--accent-dim);
+  border:1px solid var(--accent-border);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.hero-title{ font-size:19px;font-weight:500; }
+.hero-sub{ font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5; }
+
+/* tools grid */
+.section-title{
+  font-size:10px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.1em;
+  margin-bottom:12px;
+}
+.tools-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+.app-card{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:12px;
+  padding:14px;
+  cursor:pointer;
+  transition:border-color .2s,transform .15s,background .2s;
+  display:flex;flex-direction:column;gap:8px;
+}
+.app-card:hover{
+  border-color:var(--accent);
+  background:#1e3a5f;
+  transform:translateY(-2px);
+}
+.app-card:active{ transform:translateY(0); }
+.card-icon-wrap{
+  width:32px;height:32px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+}
+.card-title{ font-size:12px;font-weight:500;line-height:1.3; }
+.card-desc{ font-size:10px;color:var(--muted);line-height:1.5; }
+.card-arrow{ font-size:10px;color:var(--accent);opacity:0;transition:opacity .2s;margin-top:auto; }
+.app-card:hover .card-arrow{ opacity:1; }
+
+/* ── ZIPGRADE PANEL ── */
+.zip-panel{
+  display:none;
+  flex:1;
+  overflow-y:auto;
+  padding:28px;
+  flex-direction:column;
+  gap:24px;
+}
+.zip-panel.show{ display:flex; }
+.zip-header{ display:flex;align-items:flex-start;gap:16px; }
+.zip-logo{
+  width:48px;height:48px;border-radius:14px;
+  background:rgba(74,222,128,.08);
+  border:1px solid rgba(74,222,128,.2);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.zip-title{ font-size:18px;font-weight:500; }
+.zip-tagline{ font-size:12px;color:var(--muted);margin-top:3px;line-height:1.55;max-width:460px; }
+.zip-notice{
+  background:rgba(56,189,248,.06);
+  border:1px solid rgba(56,189,248,.15);
+  border-radius:10px;
+  padding:12px 16px;
+  display:flex;gap:10px;align-items:flex-start;
+}
+.zip-notice-icon{ flex-shrink:0;margin-top:1px; }
+.zip-notice p{ font-size:12px;color:#7dd3fc;line-height:1.6; }
+.zip-notice strong{ font-weight:500; }
+.dl-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
   gap:12px;
-  text-align:center;
 }
+.dl-card{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:12px;
+  padding:16px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.dl-card-head{ display:flex;align-items:center;gap:10px; }
+.dl-platform-icon{
+  width:36px;height:36px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.dl-name{ font-size:13px;font-weight:500; }
+.dl-sub{ font-size:10px;color:var(--muted);margin-top:1px; }
+.dl-desc{ font-size:11px;color:var(--muted);line-height:1.55; }
+.dl-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 14px;border-radius:8px;
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  color:var(--text);font-size:11px;
+  font-family:'Sora',sans-serif;
+  text-decoration:none;cursor:pointer;
+  transition:.15s;margin-top:auto;
+}
+.dl-btn:hover{ border-color:var(--accent);color:var(--accent); }
+.dl-btn svg{ flex-shrink:0; }
+.zip-web-row{
+  display:flex;align-items:center;gap:12px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:10px;
+  padding:12px 16px;
+}
+.zip-web-text{ flex:1; }
+.zip-web-name{ font-size:13px;font-weight:500; }
+.zip-web-sub{ font-size:11px;color:var(--muted);margin-top:2px; }
 
-.welcome h2{
-  font-size:28px;
-}
+/* ── IFRAME ── */
+.iframe-wrap{ display:none;flex:1; }
+.iframe-wrap.show{ display:block; }
+.iframe-wrap iframe{ width:100%;height:100%;border:none; }
 
-.welcome p{
-  color:var(--muted);
-  max-width:400px;
+/* ── STATUS BAR ── */
+.statusbar{
+  border-top:1px solid var(--border);
+  background:var(--deep);
+  padding:7px 22px;
+  display:flex;align-items:center;gap:8px;
+  flex-shrink:0;
 }
+.status-dot{ width:6px;height:6px;border-radius:50%;background:#22c55e; }
+.status-text{ font-size:10px;color:var(--muted); }
+.status-right{ margin-left:auto;font-size:10px;color:var(--border2); }
 </style>
 </head>
-
 <body>
 
+<!-- MOBILE OVERLAY -->
+<div id="mobileOverlay">
+  <div class="mob-icon">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.5">
+      <rect x="5" y="2" width="14" height="20" rx="2"/>
+      <path d="M12 17v.01" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <span class="mob-badge">Aviso de compatibilidad</span>
+  <p class="mob-title">Esta suite está optimizada para tablet o PC</p>
+  <p class="mob-desc">Las herramientas de esta plataforma requieren una pantalla más amplia para una experiencia completa. Se recomienda usarla desde una tablet o computadora.</p>
+  <p class="mob-desc" style="font-size:12px;">Si buscas una app para captura de exámenes en tu teléfono, descarga <strong style="color:#e2e8f0;">ZipGrade</strong> desde el menú lateral.</p>
+  <button class="mob-continue" onclick="dismissOverlay()">Continuar de todas formas</button>
+</div>
+
+<!-- HEADER -->
 <header>
-  <h1>Suite Profesional de Exámenes</h1>
-  <span>Separación · CSV · PIMLA</span>
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <h1>Suite Profesional de Exámenes</h1>
+  </div>
+  <div class="header-pills">
+    <span class="pill">CSV</span>
+    <span class="pill">PDF</span>
+    <span class="pill">PIMLA</span>
+    <span class="pill" id="devicePill"></span>
+  </div>
 </header>
 
 <main>
-
-  <!-- MENÚ -->
+  <!-- SIDEBAR -->
   <div class="sidebar">
-    <div class="menu-title">Herramientas</div>
-    <div class="menu">
-      <button onclick="loadApp(this,'separador-nombres.html')">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Herramientas</div>
+
+      <button class="back-btn" id="backBtn" onclick="goHome()">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M10 12L6 8l4-4"/></svg>
+        Inicio
+      </button>
+
+      <button class="nav-btn" onclick="loadApp(this,'separador-nombres.html','Separador de nombres')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2 4h12M2 8h8M2 12h5"/></svg>
         Separador de nombres
       </button>
-
-      <button onclick="loadApp(this,'generador_csv.html')">
+      <button class="nav-btn" onclick="loadApp(this,'generador_csv.html','Generador CSV')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M2 6h12M6 6v8"/></svg>
         Generador CSV
       </button>
-
-      <button onclick="loadApp(this,'pimla_generador.html')">
+      <button class="nav-btn" onclick="loadApp(this,'pimla_generador.html','Generador PIMLA')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M4 2h5l3 3v9a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M9 2v3h3M6 9h4M6 11h2"/></svg>
         Generador PIMLA (PDF)
       </button>
-				
-      <button onclick="loadApp(this,'filtro_zipgrade.html')">
+      <button class="nav-btn" onclick="loadApp(this,'filtro_zipgrade.html','Filtro ZipGradeID')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l4 4v5l4-2V8l4-4H2z"/></svg>
         Filtro ZipGradeID
       </button>
-		
-      <button onclick="loadApp(this,'pilma-analizador_examen.html')">
+      <button class="nav-btn" onclick="loadApp(this,'pilma-analizador_examen.html','Analizador de Exámenes')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12l4-5 3 3 2-4 3 3"/><rect x="1" y="1" width="14" height="14" rx="2"/></svg>
         Analizador de Exámenes
       </button>
-				
-      <button onclick="loadApp(this,'pimla-directorio.html')">
+      <button class="nav-btn" onclick="loadApp(this,'pimla-directorio.html','Directorio de Alumnos')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><circle cx="6" cy="5" r="2.5"/><path d="M1 13c0-2.8 2.2-4 5-4s5 1.2 5 4"/><path d="M11 7l2 2 3-3"/></svg>
         Directorio de Alumnos
       </button>
     </div>
+
+    <!-- Sidebar footer: ZipGrade -->
+    <div class="sidebar-footer">
+      <div class="sidebar-label">Captura de exámenes</div>
+      <button class="zipbtn" onclick="showZipPanel(this)">
+        <div class="zip-dot"></div>
+        ZipGrade
+      </button>
+    </div>
   </div>
 
-  <!-- CONTENIDO -->
+  <!-- CONTENT -->
   <div class="content">
-    <div class="welcome" id="welcome">
-      <h2>Bienvenido</h2>
-      <p>
-        Selecciona una herramienta del menú izquierdo para comenzar a trabajar.
-      </p>
+
+    <!-- HOME -->
+    <div class="home-area" id="homeArea">
+      <div class="home-hero">
+        <div class="hero-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
+          </svg>
+        </div>
+        <div>
+          <div class="hero-title">Centro de herramientas</div>
+          <div class="hero-sub">Selecciona una herramienta del menú lateral o elige una tarjeta para comenzar.</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Herramientas disponibles</div>
+        <div class="tools-grid">
+          <div class="app-card" onclick="loadByIdx('separador-nombres.html',0,'Separador de nombres')">
+            <div class="card-icon-wrap" style="background:rgba(56,189,248,.1)">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#38bdf8" stroke-width="1.3" stroke-linecap="round"><path d="M2 4h12M2 8h8M2 12h5"/></svg>
+            </div>
+            <div class="card-title">Separador de nombres</div>
+            <div class="card-desc">Divide y organiza listas de nombres rápidamente</div>
+            <div class="card-arrow">Abrir →</div>
+          </div>
+          <div class="app-card" onclick="loadByIdx('generador_csv.html',1,'Generador CSV')">
+            <div class="card-icon-wrap" style="background:rgba(52,211,153,.1)">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#34d399" stroke-width="1.3" stroke-linecap="round"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M2 6h12M6 6v8"/></svg>
+            </div>
+            <div class="card-title">Generador CSV</div>
+            <div class="card-desc">Crea archivos CSV listos para importar</div>
+            <div class="card-arrow">Abrir →</div>
+          </div>
+          <div class="app-card" onclick="loadByIdx('pimla_generador.html',2,'Generador PIMLA')">
+            <div class="card-icon-wrap" style="background:rgba(167,139,250,.1)">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#a78bfa" stroke-width="1.3" stroke-linecap="round"><path d="M4 2h5l3 3v9a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M9 2v3h3M6 9h4M6 11h2"/></svg>
+            </div>
+            <div class="card-title">Generador PIMLA</div>
+            <div class="card-desc">Genera exámenes en formato PDF</div>
+            <div class="card-arrow">Abrir →</div>
+          </div>
+          <div class="app-card" onclick="loadByIdx('filtro_zipgrade.html',3,'Filtro ZipGradeID')">
+            <div class="card-icon-wrap" style="background:rgba(251,191,36,.1)">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#fbbf24" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l4 4v5l4-2V8l4-4H2z"/></svg>
+            </div>
+            <div class="card-title">Filtro ZipGradeID</div>
+            <div class="card-desc">Filtra y valida IDs de ZipGrade</div>
+            <div class="card-arrow">Abrir →</div>
+          </div>
+          <div class="app-card" onclick="loadByIdx('pilma-analizador_examen.html',4,'Analizador de Exámenes')">
+            <div class="card-icon-wrap" style="background:rgba(251,113,133,.1)">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#fb7185" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12l4-5 3 3 2-4 3 3"/><rect x="1" y="1" width="14" height="14" rx="2"/></svg>
+            </div>
+            <div class="card-title">Analizador de Exámenes</div>
+            <div class="card-desc">Estadísticas y análisis de resultados</div>
+            <div class="card-arrow">Abrir →</div>
+          </div>
+          <div class="app-card" onclick="loadByIdx('pimla-directorio.html',5,'Directorio de Alumnos')">
+            <div class="card-icon-wrap" style="background:rgba(52,211,153,.1)">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#34d399" stroke-width="1.3" stroke-linecap="round"><circle cx="6" cy="5" r="2.5"/><path d="M1 13c0-2.8 2.2-4 5-4s5 1.2 5 4"/><path d="M11 7l2 2 3-3"/></svg>
+            </div>
+            <div class="card-title">Directorio de Alumnos</div>
+            <div class="card-desc">Gestión de registro de estudiantes</div>
+            <div class="card-arrow">Abrir →</div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <iframe id="viewer" style="display:none;"></iframe>
-  </div>
+    <!-- ZIPGRADE PANEL -->
+    <div class="zip-panel" id="zipPanel">
+      <div class="zip-header">
+        <div class="zip-logo">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+        </div>
+        <div>
+          <div class="zip-title">ZipGrade — App de captura</div>
+          <div class="zip-tagline">Herramienta complementaria para capturar exámenes de opción múltiple desde dispositivos móviles usando la cámara. Los datos se exportan para usarse con las herramientas de esta suite.</div>
+        </div>
+      </div>
 
+      <div class="zip-notice">
+        <div class="zip-notice-icon">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#38bdf8" stroke-width="1.4" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3M8 10.5v.5"/></svg>
+        </div>
+        <p><strong>Herramienta complementaria:</strong> ZipGrade se usa en el teléfono para capturar respuestas. Los archivos generados se analizan aquí en esta suite desde tablet o PC. Ambas partes trabajan juntas.</p>
+      </div>
+
+      <div>
+        <div class="section-title">Descarga para dispositivos móviles</div>
+        <div class="dl-grid">
+          <div class="dl-card">
+            <div class="dl-card-head">
+              <div class="dl-platform-icon" style="background:rgba(56,189,248,.1)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.4" stroke-linecap="round">
+                  <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.4c1.28.07 2.18.73 2.94.76.9-.17 1.76-.84 3.08-.78 1.79.09 3.14.96 3.87 2.46-3.45 2.07-2.61 6.77 1.11 7.42zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                </svg>
+              </div>
+              <div>
+                <div class="dl-name">iOS — iPhone / iPad</div>
+                <div class="dl-sub">App Store · Requiere iOS 13+</div>
+              </div>
+            </div>
+            <div class="dl-desc">Versión oficial para dispositivos Apple. Escanea hojas de respuestas y exporta resultados en CSV.</div>
+            <a class="dl-btn" href="https://www.zipgrade.com/get/" target="_blank">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9M4 7l4 4 4-4M2 14h12"/></svg>
+              Descargar para iOS
+            </a>
+          </div>
+
+          <div class="dl-card">
+            <div class="dl-card-head">
+              <div class="dl-platform-icon" style="background:rgba(74,222,128,.1)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.4" stroke-linecap="round">
+                  <path d="M17 2H7L2 12l5 10h10l5-10-5-10z"/>
+                  <circle cx="12" cy="12" r="2"/>
+                </svg>
+              </div>
+              <div>
+                <div class="dl-name">Android</div>
+                <div class="dl-sub">Google Play · Requiere Android 6+</div>
+              </div>
+            </div>
+            <div class="dl-desc">Versión oficial para dispositivos Android. Compatible con la mayoría de cámaras de gama media y alta.</div>
+            <a class="dl-btn" href="https://www.zipgrade.com/getAndroid/" target="_blank">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9M4 7l4 4 4-4M2 14h12"/></svg>
+              Descargar para Android
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Sitio oficial</div>
+        <div class="zip-web-row">
+          <div class="zip-logo" style="width:36px;height:36px;border-radius:10px;flex-shrink:0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+          </div>
+          <div class="zip-web-text">
+            <div class="zip-web-name">zipgrade.com</div>
+            <div class="zip-web-sub">Documentación, tutoriales y soporte oficial de ZipGrade</div>
+          </div>
+          <a class="dl-btn" href="https://www.zipgrade.com/" target="_blank" style="margin-top:0;flex-shrink:0">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h4v4M13 3l-7 7M5 5H3a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1v-2"/></svg>
+            Visitar sitio
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- IFRAME -->
+    <div class="iframe-wrap" id="iframeWrap">
+      <iframe id="viewer" src="about:blank"></iframe>
+    </div>
+  </div>
 </main>
 
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <div class="status-dot"></div>
+  <span class="status-text" id="statusText">Listo — 6 herramientas disponibles</span>
+  <span class="status-right" id="deviceLabel"></span>
+</div>
+
 <script>
-function loadApp(btn, file){
+(function(){
+  const ua = navigator.userAgent;
+  const w  = window.innerWidth;
+  const isMobile  = /Mobi|Android|iPhone|iPod/i.test(ua) && w < 768;
+  const isTablet  = (/iPad|Android/i.test(ua) && w >= 768) || (w >= 768 && w < 1280 && 'ontouchstart' in window);
+  const isDesktop = !isMobile && !isTablet;
 
-  // activar botón
-  document.querySelectorAll('.menu button')
-    .forEach(b=>b.classList.remove('active'));
+  const pill  = document.getElementById('devicePill');
+  const label = document.getElementById('deviceLabel');
+
+  if(isMobile){
+    pill.textContent  = 'Móvil';
+    label.textContent = 'Dispositivo: teléfono inteligente';
+    document.getElementById('mobileOverlay').classList.add('show');
+  } else if(isTablet){
+    pill.textContent  = 'Tablet';
+    label.textContent = 'Dispositivo: tablet';
+  } else {
+    pill.textContent  = 'PC';
+    label.textContent = 'Dispositivo: computadora';
+  }
+})();
+
+function dismissOverlay(){
+  document.getElementById('mobileOverlay').classList.remove('show');
+}
+
+const navBtns = document.querySelectorAll('.nav-btn');
+
+function hideAll(){
+  document.getElementById('homeArea').style.display  = 'none';
+  document.getElementById('zipPanel').classList.remove('show');
+  document.getElementById('iframeWrap').classList.remove('show');
+}
+
+function loadApp(btn, file, label){
+  navBtns.forEach(b => b.classList.remove('active'));
+  document.querySelector('.zipbtn')?.classList.remove('active');
   btn.classList.add('active');
+  hideAll();
+  document.getElementById('iframeWrap').classList.add('show');
+  document.getElementById('viewer').src = file;
+  document.getElementById('backBtn').classList.add('visible');
+  document.getElementById('statusText').textContent = 'Cargando: ' + label;
+  document.getElementById('viewer').onload = function(){
+    document.getElementById('statusText').textContent = 'Activo: ' + label;
+  };
+}
 
-  // ocultar bienvenida
-  document.getElementById('welcome').style.display='none';
+function loadByIdx(file, idx, label){
+  loadApp(navBtns[idx], file, label);
+}
 
-  // cargar iframe
-  const iframe = document.getElementById('viewer');
-  iframe.style.display='block';
-  iframe.src = file;
+function showZipPanel(btn){
+  navBtns.forEach(b => b.classList.remove('active'));
+  document.querySelector('.zipbtn')?.classList.remove('active');
+  btn.classList.add('active');
+  hideAll();
+  document.getElementById('zipPanel').classList.add('show');
+  document.getElementById('backBtn').classList.add('visible');
+  document.getElementById('statusText').textContent = 'ZipGrade — App de captura';
+}
+
+function goHome(){
+  navBtns.forEach(b => b.classList.remove('active'));
+  document.querySelector('.zipbtn')?.classList.remove('active');
+  hideAll();
+  document.getElementById('homeArea').style.display = 'flex';
+  document.getElementById('backBtn').classList.remove('visible');
+  document.getElementById('viewer').src = 'about:blank';
+  document.getElementById('statusText').textContent = 'Listo — 6 herramientas disponibles';
 }
 </script>
-
 </body>
 </html>
