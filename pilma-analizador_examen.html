@@ -692,8 +692,14 @@ function setProgress(pct,msg){
 async function generatePDF(){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-  const W=210,M=14;let y=0;
+  // Page dimensions — A4: 210x297mm, safe print area 181x267mm
+  const PW=210, PH=297, ML=14, MR=14, MT=14, MB=14;
+  const CW=PW-ML-MR;   // content width: 182mm
+  const BOTTOM=PH-MB;  // 283mm
 
+  let y=0;
+
+  // ── Read options
   const doRes=document.getElementById('chkRes').checked;
   const doTbl=document.getElementById('chkTbl').checked;
   const doDst=document.getElementById('chkDst').checked;
@@ -704,435 +710,535 @@ async function generatePDF(){
   let selStu=[];
   if(rtype==='individual'||rtype==='ambos'){
     document.querySelectorAll('#stuList input:checked').forEach(c=>selStu.push(c.value));
+    if(!selStu.length){showToast('Selecciona al menos un alumno',true);return;}
   }
 
-  // ── colour helpers (print-friendly)
+  // ── Colours (light backgrounds, print-friendly)
   const C={
-    blue:[37,99,235], green:[22,163,74], yellow:[202,138,4],
-    red:[220,38,38],  orange:[234,88,12], gray:[100,116,139],
-    lblue:[219,234,254], lgreen:[220,252,231], lyellow:[254,249,195],
-    lred:[254,226,226], lorange:[255,237,213],
-    border:[203,213,225], text:[30,41,59], text2:[71,85,105], text3:[148,163,184],
-    white:[255,255,255], pageHdr:[37,99,235]
+    blue:[37,99,235],   lblue:[219,234,254],
+    green:[22,163,74],  lgreen:[220,252,231],
+    yellow:[161,98,7],  lyellow:[254,249,195],
+    red:[185,28,28],    lred:[254,226,226],
+    orange:[194,65,12], lorange:[255,237,213],
+    text:[15,23,42], text2:[71,85,105], text3:[148,163,184],
+    border:[203,213,225], pagehdr:[37,99,235]
   };
 
-  function checkY(n){if(y+n>283){doc.addPage();y=14;}}
+  // ── Core helpers
+  function newPage(){doc.addPage();y=MT;}
+  function checkY(need){if(y+need>BOTTOM)newPage();}
 
-  // ── Page header
-  function pageHdr(title,sub=''){
-    doc.setFillColor(...C.pageHdr);pr(doc,0,0,210,6,'F');
-    doc.setFillColor(239,246,255);pr(doc,0,6,210,20,'F');
-    doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(...C.text);
-    doc.text('PIMLA — Reporte de Evaluación',M,15);
+  // rr: roundedRect needs exactly 7 args (x,y,w,h,rx,ry,style)
+  function rrect(x,yy,w,h,rad,style){doc.roundedRect(x,yy,w,h,rad,rad,style);}
+  function rect(x,yy,w,h,style){doc.rect(x,yy,w,h,style);}
+
+  function pcCol(p){return p>=70?C.green:p>=60?C.yellow:C.red;}
+  function pcLCol(p){return p>=70?C.lgreen:p>=60?C.lyellow:C.lred;}
+
+  // ── Page header — always at top of each new page
+  function pageHeader(title,sub){
+    doc.setFillColor(...C.pagehdr);rect(0,0,PW,6,'F');
+    doc.setFillColor(239,246,255);rect(0,6,PW,22,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(...C.text);
+    doc.text('PIMLA — Reporte de Evaluación',ML,14);
     doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...C.text2);
-    doc.text(title,M,21);
-    if(sub){doc.setFontSize(7.5);doc.setTextColor(...C.text3);doc.text(sub,M,26);}
+    doc.text(title,ML,20);
+    if(sub){doc.setFontSize(7.5);doc.setTextColor(...C.text3);doc.text(sub.substring(0,70),ML,25);}
     doc.setFontSize(7.5);doc.setTextColor(...C.text3);
-    doc.text(`Generado: ${new Date().toLocaleString('es-MX')}`,W-M,15,{align:'right'});
+    doc.text(new Date().toLocaleString('es-MX'),PW-MR,14,{align:'right'});
     if(excludedItems.length){
+      const excTxt='Excluidos: '+excludedItems.map(e=>'P'+e.n).join(', ');
       doc.setTextColor(...C.red);
-      doc.text(`Reactivos excluidos: ${excludedItems.map(e=>'P'+e.n).join(', ')}`,W-M,21,{align:'right'});
+      doc.text(excTxt.substring(0,50),PW-MR,20,{align:'right'});
     }
-    doc.setDrawColor(...C.border);doc.setLineWidth(0.4);doc.line(M,27,W-M,27);
-    y=31;doc.setTextColor(...C.text);
+    doc.setDrawColor(...C.border);doc.setLineWidth(0.35);doc.line(ML,28,PW-MR,28);
+    y=32;
   }
 
-  // ── Section title (light bg, colored left border)
-  function secTtl(txt){
+  // ── Section title bar
+  function sectionTitle(txt){
     checkY(12);
-    doc.setFillColor(248,250,252);rr(doc,M,y-3,W-2*M,8,1,'F');
-    doc.setDrawColor(...C.blue);doc.setLineWidth(0.5);doc.line(M,y-3,M,y+5);
+    doc.setFillColor(248,250,252);rect(ML,y-3,CW,8,'F');
+    doc.setDrawColor(...C.blue);doc.setLineWidth(0.5);doc.line(ML,y-3,ML,y+5);
     doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...C.blue);
-    doc.text(txt,M+3,y+2.5);
+    doc.text(txt,ML+4,y+2.5);
     y+=9;doc.setFont('helvetica','normal');doc.setTextColor(...C.text);
   }
 
-  // ── Stat boxes (light colored bg, dark text — ink-friendly)
+  // ── Stat boxes — always fit within CW
   function statBoxes(items){
-    checkY(18);
-    const bw=(W-2*M-(items.length-1)*3)/items.length;
+    checkY(20);
+    const gap=2;
+    const bw=(CW-(items.length-1)*gap)/items.length;
     items.forEach((it,i)=>{
-      const bx=M+i*(bw+3);
-      doc.setFillColor(...it.lc);rr(doc,bx,y,bw,15,2,'F');
-      doc.setDrawColor(...it.dc);doc.setLineWidth(0.4);rr(doc,bx,y,bw,15,2,'S');
-      doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...it.dc);
+      const bx=ML+i*(bw+gap);
+      doc.setFillColor(...it.lc);rrect(bx,y,bw,15,2,'F');
+      doc.setDrawColor(...it.dc);doc.setLineWidth(0.35);rrect(bx,y,bw,15,2,'S');
+      doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...it.dc);
       doc.text(String(it.val),bx+bw/2,y+8.5,{align:'center'});
-      doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(...C.text2);
+      doc.setFont('helvetica','normal');doc.setFontSize(5.8);doc.setTextColor(...C.text2);
       doc.text(it.lbl,bx+bw/2,y+13.5,{align:'center'});
     });
     y+=19;
   }
 
-  // ── Horizontal bar (outline only — no filled bg, small colored fill)
-  function hBar(bx,by,bw,pct,col,label,lw=38){
-    const fw=Math.max(0,(bw-lw)*(pct/100));
-    // track outline
-    doc.setDrawColor(...C.border);doc.setLineWidth(0.3);rr(doc,bx+lw,by,bw-lw,4,1,'S');
-    // fill
-    doc.setFillColor(...col);rr(doc,bx+lw,by,Math.max(0.5,fw),4,1,'F');
-    // label
+  // ── Horizontal bar — strictly within ML..PW-MR
+  function hBar(pct,label,color){
+    checkY(7);
+    const LW=46;   // label zone
+    const PCTW=10; // pct text zone
+    const barW=CW-LW-PCTW-1;
+    const fill=Math.min(barW,Math.max(0,barW*(pct/100)));
+    // label (truncated to fit)
     doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.text2);
-    doc.text(label,bx+lw-2,by+3,{align:'right'});
-    // pct value
-    doc.setFont('helvetica','bold');doc.setTextColor(...col);
-    doc.text(pct.toFixed(1)+'%',bx+bw+2,by+3);
+    const lbl=doc.splitTextToSize(label,LW-2)[0]||label.substring(0,22);
+    doc.text(lbl,ML+LW-2,y+3.3,{align:'right'});
+    // track
+    doc.setDrawColor(...C.border);doc.setLineWidth(0.25);rrect(ML+LW,y,barW,4,1,'S');
+    // fill
+    if(fill>0.2){doc.setFillColor(...color);rrect(ML+LW,y,fill,4,1,'F');}
+    // pct
+    doc.setFont('helvetica','bold');doc.setTextColor(...color);
+    doc.text(pct.toFixed(1)+'%',ML+LW+barW+PCTW,y+3.3,{align:'right'});
+    y+=6.5;
   }
 
-  // ── Table (alternating very-light rows, no dark headers)
-  function pdfTable(hdrs,rows,cw,startY,opts={}){
-    const rH=6,hH=7.5;let ty=startY;
-    function drawHeader(atY){
-      doc.setFillColor(239,246,255);pr(doc,M,atY,W-2*M,hH,'F');
-      doc.setDrawColor(...C.border);doc.setLineWidth(0.3);pr(doc,M,atY,W-2*M,hH,'S');
-      doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(...C.blue);
-      let cx=M+2;hdrs.forEach((h,i)=>{doc.text(String(h),cx,atY+5);cx+=cw[i];});
+  // ── Table — auto-scales columns to always fit CW exactly
+  function pdfTable(headers,rows,colWidths,opts){
+    opts=opts||{};
+    const totalW=colWidths.reduce((a,b)=>a+b,0);
+    const scale=totalW>CW?(CW/totalW):1;
+    const cw=colWidths.map(c=>c*scale);
+    const RH=5.5,HH=6.5;
+
+    function drawHeader(){
+      checkY(HH+2);
+      doc.setFillColor(239,246,255);rect(ML,y,CW,HH,'F');
+      doc.setDrawColor(...C.border);doc.setLineWidth(0.25);rect(ML,y,CW,HH,'S');
+      doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...C.blue);
+      let cx=ML+1.5;
+      headers.forEach((h,i)=>{
+        doc.text(String(h).substring(0,Math.floor(cw[i]/1.7)),cx,y+4.5);
+        cx+=cw[i];
+      });
+      y+=HH;
     }
-    drawHeader(ty);ty+=hH;
+
+    drawHeader();
     rows.forEach((row,ri)=>{
-      if(ty+rH>283){doc.addPage();ty=14;drawHeader(ty);ty+=hH;}
-      if(ri%2===0){doc.setFillColor(248,250,252);pr(doc,M,ty,W-2*M,rH,'F');}
-      doc.setDrawColor(...C.border);doc.setLineWidth(0.2);doc.line(M,ty+rH,W-2*M+M,ty+rH);
-      doc.setFont('helvetica','normal');doc.setFontSize(7.5);
-      let rcx=M+2;
+      if(y+RH>BOTTOM){newPage();drawHeader();}
+      if(ri%2===0){doc.setFillColor(248,250,252);rect(ML,y,CW,RH,'F');}
+      doc.setDrawColor(...C.border);doc.setLineWidth(0.15);
+      doc.line(ML,y+RH,ML+CW,y+RH);
+      doc.setFont('helvetica','normal');doc.setFontSize(7);
+      let cx=ML+1.5;
       row.forEach((cell,ci)=>{
-        const s=String(cell);
+        const s=String(cell===null||cell===undefined?'':cell);
+        const maxCh=Math.max(3,Math.floor(cw[ci]/1.7));
         if(opts.cc&&opts.cc.includes(ci)){
           const pv=parseFloat(s)||0;
-          const col=pv>=70?C.green:pv>=60?C.yellow:C.red;
-          doc.setTextColor(...col);doc.setFont('helvetica','bold');
+          doc.setTextColor(...pcCol(pv));doc.setFont('helvetica','bold');
         }else{doc.setTextColor(...C.text);doc.setFont('helvetica','normal');}
-        doc.text(s.substring(0,20),rcx,ty+4.3);rcx+=cw[ci];
+        doc.text(s.substring(0,maxCh),cx,y+4.2);
+        cx+=cw[ci];
       });
-      ty+=rH;
+      y+=RH;
     });
-    doc.setDrawColor(...C.border);doc.setLineWidth(0.3);doc.line(M,ty,W-2*M+M,ty);
-    return ty+4;
+    doc.setDrawColor(...C.border);doc.setLineWidth(0.25);doc.line(ML,y,ML+CW,y);
+    y+=4;
   }
 
-  // ── Item dificultad grid
-  function getItems(){
-    if(!filtRows.length)return[];
-    const possible=Math.max(...filtRows.map(r=>r.possible));
-    return Array.from({length:possible},(_,i)=>{
-      const n=i+1;
-      const total=filtRows.filter(r=>r.answers.find(a=>a.n===n)).length;
-      const correct=filtRows.reduce((s,r)=>{const a=r.answers.find(a=>a.n===n);return s+(a?a.earned:0);},0);
-      return{n,pct:total?(correct/total*100):0,correct,total};
+  // ── Answer grid — row-by-row, safe page breaks
+  function answerGrid(answers){
+    const CW2=11, CH=10;
+    const perRow=Math.floor(CW/(CW2+1));
+    const chunks=[];
+    for(let i=0;i<answers.length;i+=perRow)chunks.push(answers.slice(i,i+perRow));
+    const exPDF=getExcludedNums();
+    chunks.forEach(chunk=>{
+      checkY(CH+3);
+      let cx=ML;
+      chunk.forEach(a=>{
+        if(exPDF.has(a.n)){
+          doc.setFillColor(250,245,245);rrect(cx,y,CW2,CH,1,'F');
+          doc.setDrawColor(...C.red);doc.setLineWidth(0.25);rrect(cx,y,CW2,CH,1,'S');
+          doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...C.text3);
+          doc.text('P'+a.n,cx+CW2/2,y+3.5,{align:'center'});
+          doc.setFontSize(5);doc.setTextColor(...C.red);
+          doc.text('excl',cx+CW2/2,y+8,{align:'center'});
+        }else{
+          const ok=a.earned>0;
+          const fc=ok?C.lgreen:C.lred;const bc=ok?C.green:C.red;
+          doc.setFillColor(...fc);rrect(cx,y,CW2,CH,1,'F');
+          doc.setDrawColor(...bc);doc.setLineWidth(0.25);rrect(cx,y,CW2,CH,1,'S');
+          doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...C.text3);
+          doc.text('P'+a.n,cx+CW2/2,y+2.8,{align:'center'});
+          doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...bc);
+          doc.text(a.stu||'–',cx+CW2/2,y+6.5,{align:'center'});
+          doc.setFont('helvetica','normal');doc.setFontSize(5);doc.setTextColor(...C.text3);
+          doc.text(a.key,cx+CW2/2,y+9.2,{align:'center'});
+        }
+        cx+=CW2+1;
+      });
+      y+=CH+2;
     });
+    y+=3;
   }
 
-  // ═══════════════════════
+  // ── Reactivos grid — same safe pattern
+  function reactivosGrid(items){
+    const CW2=10.5, CH=10;
+    const perRow=Math.floor(CW/(CW2+1));
+    const chunks=[];
+    for(let i=0;i<items.length;i+=perRow)chunks.push(items.slice(i,i+perRow));
+    chunks.forEach(chunk=>{
+      checkY(CH+3);
+      let cx=ML;
+      chunk.forEach(it=>{
+        if(it.excluded){
+          doc.setFillColor(250,240,240);rrect(cx,y,CW2,CH,1,'F');
+          doc.setDrawColor(...C.red);doc.setLineWidth(0.25);rrect(cx,y,CW2,CH,1,'S');
+          doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...C.red);
+          doc.text('P'+it.n,cx+CW2/2,y+3.5,{align:'center'});
+          doc.text('excl',cx+CW2/2,y+8,{align:'center'});
+        }else{
+          const col=pcCol(it.pct);const lc=pcLCol(it.pct);
+          doc.setFillColor(...lc);rrect(cx,y,CW2,CH,1,'F');
+          doc.setDrawColor(...col);doc.setLineWidth(0.25);rrect(cx,y,CW2,CH,1,'S');
+          doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...C.text3);
+          doc.text('P'+it.n,cx+CW2/2,y+3.5,{align:'center'});
+          doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(...col);
+          doc.text(it.pct.toFixed(0)+'%',cx+CW2/2,y+8.2,{align:'center'});
+        }
+        cx+=CW2+1;
+      });
+      y+=CH+2;
+    });
+    y+=3;
+  }
+
+  // ═══════════════════════════════════
   //  GENERAL REPORT
-  // ═══════════════════════
+  // ═══════════════════════════════════
   if(rtype==='general'||rtype==='ambos'){
-    pageHdr('Reporte General del Grupo',`Total de alumnos: ${filtRows.length}  |  Reactivos: ${filtRows.length?Math.max(...filtRows.map(r=>r.possible)):0}${excludedItems.length?'  |  Excluidos: '+excludedItems.length:''}`);
-    setProgress(8,'Resumen ejecutivo…');
+    const effAll=filtRows.map(r=>({...r,...calcEffective(r)})).sort((a,b)=>b.pct-a.pct);
+    const tot=effAll.length;
+    const avg=tot?(effAll.reduce((s,r)=>s+r.pct,0)/tot):0;
+    const pass=effAll.filter(r=>r.pct>=60).length;
+    const mx=tot?effAll[0].pct:0;
+    const mn=tot?effAll[tot-1].pct:0;
+    const med=tot?[...effAll].sort((a,b)=>a.pct-b.pct)[Math.floor(tot/2)].pct:0;
+    const maxR=tot?Math.max(...filtRows.map(r=>r.possible)):0;
 
-    // Excluded items note in PDF
-    if(excludedItems.length){
-      checkY(12+excludedItems.length*4);
-      doc.setFillColor(...C.lred);rr(doc,M,y,W-2*M,6,1,'F');
-      doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...C.red);
-      doc.text(`Reactivos excluidos del calculo (${excludedItems.length}):`,M+2,y+4.2);y+=8;
-      excludedItems.forEach(e=>{
-        checkY(5);
-        doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...C.text);
-        const txt=`  P${e.n}: ${e.comment||'Sin comentario'}`;
-        const wl=doc.splitTextToSize(txt,W-2*M-4);
-        doc.text(wl,M,y);y+=wl.length*4.5;
-      });
-      y+=3;
-    }
+    pageHeader(
+      'Reporte General del Grupo',
+      `Alumnos: ${tot}  |  Reactivos: ${maxR}${excludedItems.length?'  |  Excluidos: '+excludedItems.length:''}`
+    );
+    setProgress(6,'Resumen ejecutivo…');
 
+    // ── Resumen
     if(doRes){
-      secTtl('Resumen Ejecutivo');
-      const t=filtRows.length;
-      const effRows=filtRows.map(r=>({...r,...calcEffective(r)}));
-      const avg=t?(effRows.reduce((s,r)=>s+r.pct,0)/t):0;
-      const pass=effRows.filter(r=>r.pct>=60).length;
-      const fail=t-pass;
-      const mx=t?Math.max(...effRows.map(r=>r.pct)):0;
-      const mn=t?Math.min(...effRows.map(r=>r.pct)):0;
-      const sorted2=[...effRows].sort((a,b)=>a.pct-b.pct);
-      const med=t?sorted2[Math.floor(t/2)].pct:0;
+      sectionTitle('Resumen Ejecutivo');
       statBoxes([
-        {lbl:'Total Alumnos',val:t,lc:C.lblue,dc:C.blue},
-        {lbl:'Promedio %',val:avg.toFixed(1)+'%',lc:C.lgreen,dc:C.green},
-        {lbl:'Aprobados',val:pass,lc:C.lyellow,dc:C.yellow},
-        {lbl:'Reprobados',val:fail,lc:C.lred,dc:C.red},
-        {lbl:'Máximo',val:mx.toFixed(1)+'%',lc:C.lblue,dc:C.blue},
-        {lbl:'Mediana',val:med.toFixed(1)+'%',lc:C.lgreen,dc:C.green},
+        {lbl:'Total Alumnos', val:tot,               lc:C.lblue,   dc:C.blue},
+        {lbl:'Promedio %',    val:avg.toFixed(1)+'%', lc:C.lgreen,  dc:C.green},
+        {lbl:'Aprobados',     val:pass,               lc:C.lyellow, dc:C.yellow},
+        {lbl:'Reprobados',    val:tot-pass,           lc:C.lred,    dc:C.red},
+        {lbl:'Máximo',        val:mx.toFixed(1)+'%',  lc:C.lblue,   dc:C.blue},
+        {lbl:'Mediana',       val:med.toFixed(1)+'%', lc:C.lgreen,  dc:C.green},
       ]);
-      const apR=t?((pass/t)*100).toFixed(1):0;
-      const analysis=`El grupo presenta un promedio general de ${avg.toFixed(1)}% con una mediana de ${med.toFixed(1)}%. La tasa de aprobacion es de ${apR}% (${pass} alumnos). La calificacion mas alta fue ${mx.toFixed(1)}% y la mas baja ${mn.toFixed(1)}%.`;
-      const wl=doc.splitTextToSize(analysis,W-2*M);
-      checkY(wl.length*4+4);
+      checkY(14);
+      const apR=tot?((pass/tot)*100).toFixed(1):0;
+      const sumTxt=`El grupo presenta un promedio de ${avg.toFixed(1)}% con mediana de ${med.toFixed(1)}%. Tasa de aprobacion: ${apR}% (${pass} de ${tot}). Maximo: ${mx.toFixed(1)}%, minimo: ${mn.toFixed(1)}%.`;
+      const wrapped=doc.splitTextToSize(sumTxt,CW);
       doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...C.text2);
-      doc.text(wl,M,y);y+=wl.length*4.2+6;
+      wrapped.forEach(line=>{checkY(5);doc.text(line,ML,y);y+=4.5;});
+      y+=4;
     }
 
-    setProgress(20,'Tabla de alumnos…');
+    // ── Tabla de alumnos
+    setProgress(18,'Tabla de alumnos…');
     if(doTbl){
-      secTtl('Tabla de Alumnos (ordenada por calificación)');
-      const rows=[...filtRows].map(r=>({...r,...calcEffective(r)})).sort((a,b)=>b.pct-a.pct);
-      y=pdfTable(['#','ZipGradeID','Aciertos','Total','% Correcto','Version'],
-        rows.map((r,i)=>[i+1,r.zipID,r.earned,r.possible,r.pct.toFixed(1)+'%',r.kv||'—']),
-        [10,42,24,20,36,26],y,{cc:[4]})+2;
+      sectionTitle('Tabla de Alumnos — ordenada por calificación');
+      // Base cols: 8+22+42+14+14+22 = 122, remaining for sections
+      const baseCols=[8,22,42,14,14,22];
+      const baseSum=baseCols.reduce((a,b)=>a+b,0);
+      const secCols=sections.length?
+        sections.map(()=>Math.max(14,Math.min(20,Math.floor((CW-baseSum)/sections.length)))):
+        [];
+      pdfTable(
+        ['#','ZipGradeID','Nombre/ID','Aciert.','Total','% Global',...sections.map(s=>s.name.substring(0,7))],
+        effAll.map((r,i)=>{
+          const raw=filtRows.find(x=>x.zipID===r.zipID);
+          const secPcts=raw?getSecData(raw).map(s=>s.pct.toFixed(1)+'%'):sections.map(()=>'—');
+          return[i+1,r.zipID,r.zipID,r.earned,r.possible,r.pct.toFixed(1)+'%',...secPcts];
+        }),
+        [...baseCols,...secCols],
+        {cc:[5,...sections.map((_,i)=>6+i)]}
+      );
     }
 
-    setProgress(36,'Distribución…');
+    // ── Distribución
+    setProgress(32,'Distribución…');
     if(doDst){
-      checkY(80);
-      secTtl('Distribución de Calificaciones');
-      const effRowsDst=filtRows.map(r=>({...r,...calcEffective(r)}));
+      checkY(75);
+      sectionTitle('Distribución de Calificaciones');
       const bins=Array.from({length:10},(_,i)=>({l:`${i*10}–${i===9?'100':i*10+9}%`,c:0}));
-      effRowsDst.forEach(r=>{const bi=Math.min(9,Math.floor(r.pct/10));bins[bi].c++;});
+      filtRows.map(r=>calcEffective(r)).forEach(e=>{
+        bins[Math.min(9,Math.floor(e.pct/10))].c++;
+      });
       const mc=Math.max(...bins.map(b=>b.c))||1;
-      const bw=W-2*M-46;
       [...bins].reverse().forEach(b=>{
-        checkY(7);
-        const pv=parseInt(b.l);const col=pv>=70?C.green:pv>=50?C.yellow:C.red;
-        hBar(M,y,bw+46,b.c/mc*100,col,`${b.l}  (${b.c} alumnos)`,46);y+=6.5;
+        const pv=parseInt(b.l);
+        hBar(b.c/mc*100,`${b.l} (${b.c} alumnos)`,pv>=70?C.green:pv>=50?C.yellow:C.red);
       });
       y+=3;
-      // Ranges
-      const rngs2=[
-        {l:'Excelente  90–100%',mn:90,mx2:101,col:C.green},
-        {l:'Bueno        70–89%',mn:70,mx2:90,col:C.blue},
-        {l:'Suficiente  60–69%',mn:60,mx2:70,col:C.yellow},
-        {l:'Deficiente  50–59%',mn:50,mx2:60,col:C.orange},
-        {l:'Insuficiente  <50%',mn:0,mx2:50,col:C.red},
+      const rngs=[
+        {l:'Excelente 90–100%',mn:90,mx:101,col:C.green},
+        {l:'Bueno 70–89%',     mn:70,mx:90, col:C.blue},
+        {l:'Suficiente 60–69%',mn:60,mx:70, col:C.yellow},
+        {l:'Deficiente 50–59%',mn:50,mx:60, col:C.orange},
+        {l:'Insuficiente <50%', mn:0, mx:50, col:C.red},
       ];
-      const tot2=effRowsDst.length||1;
-      checkY(rngs2.length*7+6);
+      checkY(rngs.length*7+8);
       doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...C.text);
-      doc.text('Resumen por nivel de desempeño:',M,y);y+=5;
-      rngs2.forEach(rng=>{
-        checkY(7);
-        const cnt=effRowsDst.filter(r=>r.pct>=rng.mn&&r.pct<rng.mx2).length;
-        hBar(M,y,W-2*M,(cnt/tot2)*100,rng.col,`${rng.l}  —  ${cnt} (${(cnt/tot2*100).toFixed(1)}%)`,56);y+=6.5;
-      });
-      y+=5;
-    }
-
-    setProgress(52,'Secciones…');
-    const exclPDF=getExcludedNums();
-    if(doSec&&sections.length){
-      checkY(20);
-      secTtl('Promedios por Sección / Materia');
-      sections.forEach(sec=>{
-        let te=0,tp=0;
-        filtRows.forEach(r=>{const ans=r.answers.filter(a=>a.n>=sec.from&&a.n<=sec.to&&!exclPDF.has(a.n));te+=ans.reduce((s,a)=>s+a.earned,0);tp+=ans.length;});
-        const avg=tp?(te/tp*100):0;
-        checkY(7);hBar(M,y,W-2*M-2,avg,h2r(sec.col),`${sec.name} (P${sec.from}–P${sec.to})`,46);y+=7;
+      doc.text('Resumen por nivel:',ML,y);y+=5;
+      rngs.forEach(rng=>{
+        const cnt=effAll.filter(r=>r.pct>=rng.mn&&r.pct<rng.mx).length;
+        hBar(tot?(cnt/tot*100):0,`${rng.l} — ${cnt} (${tot?(cnt/tot*100).toFixed(1):0}%)`,rng.col);
       });
       y+=4;
-      checkY(20);
-      doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...C.text);
-      doc.text('Calificaciones individuales por sección:',M,y);y+=5;
-      const sw=Math.min(24,Math.floor((W-2*M-58)/Math.max(1,sections.length)));
-      const secEff=filtRows.map(r=>({...r,...calcEffective(r)}));
-      y=pdfTable(['ZipGradeID','% Global',...sections.map(s=>s.name.substring(0,9))],
-        secEff.map(r=>[r.zipID,r.pct.toFixed(1)+'%',...getSecData(r).map(s=>s.pct.toFixed(1)+'%')]),
-        [34,24,...sections.map(()=>sw)],y,{cc:Array.from({length:sections.length+1},(_,i)=>i+1)})+3;
     }
 
-    setProgress(66,'Reactivos…');
+    // ── Secciones
+    setProgress(48,'Secciones…');
+    const exclPDF=getExcludedNums();
+    if(doSec&&sections.length){
+      sectionTitle('Calificaciones por Sección / Materia');
+      sections.forEach(sec=>{
+        let te=0,tp=0;
+        filtRows.forEach(r=>{
+          const ans=r.answers.filter(a=>a.n>=sec.from&&a.n<=sec.to&&!exclPDF.has(a.n));
+          te+=ans.reduce((s,a)=>s+a.earned,0);tp+=ans.length;
+        });
+        hBar(tp?(te/tp*100):0,`${sec.name} (P${sec.from}–P${sec.to})`,h2r(sec.col));
+      });
+      y+=3;
+      // Section detail table
+      doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...C.text);
+      checkY(8);doc.text('Detalle por alumno y sección:',ML,y);y+=5;
+      const sw=Math.max(14,Math.min(20,Math.floor((CW-56)/Math.max(1,sections.length))));
+      const secEff=effAll.map(r=>{
+        const raw=filtRows.find(x=>x.zipID===r.zipID);
+        const secPcts=raw?getSecData(raw).map(s=>s.pct.toFixed(1)+'%'):sections.map(()=>'—');
+        return[r.zipID,r.pct.toFixed(1)+'%',...secPcts];
+      });
+      pdfTable(
+        ['ZipGradeID','% Global',...sections.map(s=>s.name.substring(0,8))],
+        secEff,
+        [32,24,...sections.map(()=>sw)],
+        {cc:Array.from({length:sections.length+1},(_,i)=>i+1)}
+      );
+    }
+
+    // ── Reactivos
+    setProgress(62,'Análisis de reactivos…');
     if(doRea){
-      checkY(24);
-      secTtl('Análisis de Reactivos — Índice de Dificultad');
-      const items=getItems(); // getItems already respects excluded via getExcludedNums below
-      // Rebuild items excluding excluded nums
-      const itemsFull=filtRows.length?Array.from({length:Math.max(...filtRows.map(r=>r.possible))},(_,i)=>{
+      sectionTitle('Análisis de Reactivos — Índice de Dificultad');
+      const maxP=filtRows.length?Math.max(...filtRows.map(r=>r.possible)):0;
+      const items=Array.from({length:maxP},(_,i)=>{
         const n=i+1;
-        if(exclPDF.has(n))return{n,pct:-1,correct:0,total:0,excluded:true};
+        if(exclPDF.has(n))return{n,pct:0,correct:0,total:0,excluded:true};
         const total=filtRows.filter(r=>r.answers.find(a=>a.n===n)).length;
         const correct=filtRows.reduce((s,r)=>{const a=r.answers.find(a=>a.n===n);return s+(a?a.earned:0);},0);
         return{n,pct:total?(correct/total*100):0,correct,total,excluded:false};
-      }):[];
-      if(itemsFull.length){
-        const cw2=10.5,ch2=10,prR=Math.floor((W-2*M)/(cw2+1));
-        let cx=M,iy=y;
-        itemsFull.forEach((it,idx)=>{
-          if(idx>0&&idx%prR===0){cx=M;iy+=ch2+2;checkY(ch2+4);}
-          if(it.excluded){
-            doc.setFillColor(250,240,240);rr(doc,cx,iy,cw2,ch2,1,'F');
-            doc.setDrawColor(...C.red);doc.setLineWidth(0.3);rr(doc,cx,iy,cw2,ch2,1,'S');
-            doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...C.red);
-            doc.text(`P${it.n}`,cx+cw2/2,iy+3.5,{align:'center'});
-            doc.text('excl',cx+cw2/2,iy+8,{align:'center'});
-          }else{
-            const col=it.pct>=70?C.green:it.pct>=50?C.yellow:C.red;
-            const lc=it.pct>=70?C.lgreen:it.pct>=50?C.lyellow:C.lred;
-            doc.setFillColor(...lc);rr(doc,cx,iy,cw2,ch2,1,'F');
-            doc.setDrawColor(...col);doc.setLineWidth(0.3);rr(doc,cx,iy,cw2,ch2,1,'S');
-            doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...C.text3);
-            doc.text(`P${it.n}`,cx+cw2/2,iy+3.5,{align:'center'});
-            doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(...col);
-            doc.text(`${it.pct.toFixed(0)}%`,cx+cw2/2,iy+8.2,{align:'center'});
-          }
-          cx+=cw2+1;
-        });
-        y=iy+ch2+8;
-        checkY(8);
-        [[C.green,'70–100% Aceptable'],[C.yellow,'50–69% Moderado'],[C.red,'0–49% Dificultad alta']].forEach((l,i)=>{
-          doc.setFillColor(...l[0]);rr(doc,M+i*58,y,4,4,0.5,'F');
+      });
+      reactivosGrid(items);
+      // Legend
+      checkY(8);
+      [[C.green,'70–100% Aceptable'],[C.yellow,'50–69% Moderado'],[C.red,'0–49% Alta dificultad']]
+        .forEach(([col,txt],i)=>{
+          doc.setFillColor(...col);rrect(ML+i*58,y,4,4,0.5,'F');
           doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.text2);
-          doc.text(l[1],M+i*58+6,y+3.2);
+          doc.text(txt,ML+i*58+6,y+3.2);
         });
-        y+=8;
-        const activeItems=itemsFull.filter(it=>!it.excluded);
-        const sortedI=[...activeItems].sort((a,b)=>a.pct-b.pct);
-        const hard=sortedI.slice(0,Math.min(5,sortedI.length));
-        const easy=[...sortedI].reverse().slice(0,Math.min(5,sortedI.length));
-        checkY(42);
-        const hw=(W-2*M-6)/2;
-        doc.setFillColor(...C.lred);rr(doc,M,y,hw,6,1,'F');
-        doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...C.red);
-        doc.text('Mayor dificultad (menos aciertos):',M+2,y+4);
-        let ly=y+8;
-        hard.forEach(it=>{
-          doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.text);
-          doc.text(`  P${it.n}: ${it.pct.toFixed(1)}%  (${it.correct}/${it.total})`,M,ly);ly+=5;
-        });
-        const ex2=M+hw+6;
-        doc.setFillColor(...C.lgreen);rr(doc,ex2,y,hw,6,1,'F');
-        doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...C.green);
-        doc.text('Mejor desempeño:',ex2+2,y+4);
-        let ly2=y+8;
-        easy.forEach(it=>{
-          doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.text);
-          doc.text(`  P${it.n}: ${it.pct.toFixed(1)}%  (${it.correct}/${it.total})`,ex2,ly2);ly2+=5;
-        });
-        y=Math.max(ly,ly2)+4;
-      }
+      y+=8;
+      // Hard / easy summary
+      const active=items.filter(it=>!it.excluded);
+      const sorted=[...active].sort((a,b)=>a.pct-b.pct);
+      const hard=sorted.slice(0,Math.min(5,sorted.length));
+      const easy=[...sorted].reverse().slice(0,Math.min(5,sorted.length));
+      checkY(42);
+      const hw=(CW-4)/2;
+      // hard
+      doc.setFillColor(...C.lred);rrect(ML,y,hw,6,1,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...C.red);
+      doc.text('Mayor dificultad:',ML+2,y+4);
+      let ly=y+8;
+      hard.forEach(it=>{
+        checkY(5);doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.text);
+        doc.text(`P${it.n}: ${it.pct.toFixed(1)}% (${it.correct}/${it.total})`,ML+2,ly);ly+=5;
+      });
+      // easy
+      const ex=ML+hw+4;
+      doc.setFillColor(...C.lgreen);rrect(ex,y,hw,6,1,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...C.green);
+      doc.text('Mejor desempeño:',ex+2,y+4);
+      let ly2=y+8;
+      easy.forEach(it=>{
+        checkY(5);doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.text);
+        doc.text(`P${it.n}: ${it.pct.toFixed(1)}% (${it.correct}/${it.total})`,ex+2,ly2);ly2+=5;
+      });
+      y=Math.max(ly,ly2)+4;
     }
 
-    setProgress(78,'Top 10…');
+    // ── Top 10
+    setProgress(76,'Top 10…');
     if(doTop){
-      checkY(20);
-      secTtl('Top 10 — Mejores y Mayor Dificultad');
-      const sgEff=filtRows.map(r=>({...r,...calcEffective(r)})).sort((a,b)=>b.pct-a.pct);
-      const top10=sgEff.slice(0,Math.min(10,sgEff.length));
-      const bot10=[...sgEff].reverse().slice(0,Math.min(10,sgEff.length));
-      checkY(top10.length*6+30);
-      const hw2=(W-2*M-6)/2;
-      doc.setFillColor(...C.lgreen);rr(doc,M,y,hw2,6,1,'F');
+      checkY(22);sectionTitle('Top 10 — Mejores y Mayor Dificultad');
+      const top10=effAll.slice(0,Math.min(10,effAll.length));
+      const bot10=[...effAll].reverse().slice(0,Math.min(10,effAll.length));
+      checkY(top10.length*5.5+16);
+      const hw=(CW-4)/2;
+      doc.setFillColor(...C.lgreen);rrect(ML,y,hw,6,1,'F');
       doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...C.green);
-      doc.text('Mejores calificaciones',M+2,y+4);
-      let ty2=y+8;
+      doc.text('Mejores calificaciones',ML+2,y+4);
+      let ty2=y+9;
       top10.forEach((r,i)=>{
-        doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.text);
-        doc.text(`${i+1}. ${r.zipID}`,M+2,ty2);
+        checkY(5);doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.text);
+        doc.text(`${i+1}. ${r.zipID}`,ML+2,ty2);
         doc.setFont('helvetica','bold');doc.setTextColor(...C.green);
-        doc.text(r.pct.toFixed(1)+'%',M+hw2-5,ty2,{align:'right'});ty2+=5;
+        doc.text(r.pct.toFixed(1)+'%',ML+hw-3,ty2,{align:'right'});ty2+=5.5;
       });
-      const bx2=M+hw2+6;
-      doc.setFillColor(...C.lred);rr(doc,bx2,y,hw2,6,1,'F');
+      const bx2=ML+hw+4;
+      doc.setFillColor(...C.lred);rrect(bx2,y,hw,6,1,'F');
       doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...C.red);
       doc.text('Mayor dificultad',bx2+2,y+4);
-      let ty3=y+8;
+      let ty3=y+9;
       bot10.forEach((r,i)=>{
-        doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.text);
+        checkY(5);doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.text);
         doc.text(`${i+1}. ${r.zipID}`,bx2+2,ty3);
         doc.setFont('helvetica','bold');doc.setTextColor(...C.red);
-        doc.text(r.pct.toFixed(1)+'%',bx2+hw2-5,ty3,{align:'right'});ty3+=5;
+        doc.text(r.pct.toFixed(1)+'%',bx2+hw-3,ty3,{align:'right'});ty3+=5.5;
       });
       y=Math.max(ty2,ty3)+4;
     }
   }
 
-  // ═══════════════════════
+  // ═══════════════════════════════════
   //  INDIVIDUAL REPORTS
-  // ═══════════════════════
+  // ═══════════════════════════════════
   if((rtype==='individual'||rtype==='ambos')&&selStu.length){
+    const exclPDF=getExcludedNums();
     const stuRows=filtRows.filter(r=>selStu.includes(r.zipID));
-    stuRows.forEach((rawR,si)=>{
-      const r={...rawR,...calcEffective(rawR)};
-      setProgress(80+Math.round(18*(si/stuRows.length)),`Alumno ${si+1}/${stuRows.length}…`);
-      doc.addPage();y=0;
-      pageHdr(`Reporte Individual — Alumno ${r.zipID}`,`Clave: ${r.kv||'N/A'}  |  ${r.earned}/${r.possible} aciertos efectivos`);
 
+    stuRows.forEach((rawR,si)=>{
+      setProgress(80+Math.round(18*(si/stuRows.length)),`Alumno ${si+1}/${stuRows.length}…`);
+      // New page for each student — but skip if we're on a fresh empty page
+      if(si===0&&rtype==='individual'){
+        // First student, individual-only: page 1 already exists, just reset y
+        doc.setPage(1);y=MT;
+      }else{
+        newPage();
+      }
+      const eff=calcEffective(rawR);
+      pageHeader(
+        `Reporte Individual — Alumno ${rawR.zipID}`,
+        `Clave: ${rawR.kv||'N/A'}  |  ${eff.earned}/${eff.possible} aciertos  |  ${eff.pct.toFixed(1)}%`
+      );
+
+      // Rank in group
+      const effAll2=filtRows.map(r=>calcEffective(r).pct).sort((a,b)=>b-a);
+      const rank=effAll2.filter(p=>p>eff.pct+0.001).length+1;
+      const avg2=effAll2.reduce((s,p)=>s+p,0)/(effAll2.length||1);
+      const diff=eff.pct-avg2;
+
+      // Stat boxes
       statBoxes([
-        {lbl:'Aciertos (ef.)',val:`${r.earned}/${r.possible}`,lc:C.lblue,dc:C.blue},
-        {lbl:'% Correcto',val:r.pct.toFixed(1)+'%',lc:r.pct>=70?C.lgreen:r.pct>=60?C.lyellow:C.lred,dc:r.pct>=70?C.green:r.pct>=60?C.yellow:C.red},
-        {lbl:'Errores',val:r.possible-r.earned,lc:C.lred,dc:C.red},
-        {lbl:'Resultado',val:r.pct>=60?'APROBADO':'REPROBADO',lc:r.pct>=60?C.lgreen:C.lred,dc:r.pct>=60?C.green:C.red},
+        {lbl:'Aciertos',     val:`${eff.earned}/${eff.possible}`,lc:C.lblue,  dc:C.blue},
+        {lbl:'% Correcto',   val:eff.pct.toFixed(1)+'%',         lc:pcLCol(eff.pct),dc:pcCol(eff.pct)},
+        {lbl:'Errores',      val:eff.possible-eff.earned,         lc:C.lred,   dc:C.red},
+        {lbl:'Resultado',    val:eff.pct>=60?'APROBADO':'REPROBADO',lc:eff.pct>=60?C.lgreen:C.lred,dc:eff.pct>=60?C.green:C.red},
+        {lbl:'Lugar #'+rank, val:'de '+effAll2.length,            lc:C.lblue,  dc:C.blue},
+        {lbl:'vs Promedio',  val:(diff>=0?'+':'')+diff.toFixed(1)+'%',lc:diff>=0?C.lgreen:C.lred,dc:diff>=0?C.green:C.red},
       ]);
 
-      checkY(12);
+      // Global progress bar
+      checkY(13);
       doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...C.text);
-      doc.text('Desempeño global:',M,y);y+=4;
-      const bW=W-2*M;
-      doc.setDrawColor(...C.border);doc.setLineWidth(0.3);rr(doc,M,y,bW,7,2,'S');
-      const fCol=r.pct>=70?C.green:r.pct>=60?C.yellow:C.red;
-      const fw=Math.max(0,bW*(r.pct/100));
-      doc.setFillColor(...fCol);rr(doc,M,y,fw,7,2,'F');
-      doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...fCol);
-      doc.text(r.pct.toFixed(1)+'%',M+fw+2,y+4.8);
+      doc.text('Desempeño global:',ML,y);y+=4;
+      const fill=Math.max(0,CW*(eff.pct/100));
+      doc.setDrawColor(...C.border);doc.setLineWidth(0.25);rrect(ML,y,CW,7,2,'S');
+      if(fill>0.2){doc.setFillColor(...pcCol(eff.pct));rrect(ML,y,fill,7,2,'F');}
+      doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...pcCol(eff.pct));
+      doc.text(eff.pct.toFixed(1)+'%',fill>CW*0.15?ML+fill-3:ML+fill+2,y+4.8,
+        {align:fill>CW*0.15?'right':'left'});
       y+=11;
 
+      // Sections
       if(sections.length){
-        secTtl('Desempeño por Sección / Materia');
+        sectionTitle('Desempeño por Sección / Materia');
         getSecData(rawR).forEach(s=>{
-          checkY(8);hBar(M,y,W-2*M-2,s.pct,h2r(s.col),`${s.name}  ${s.earned}/${s.total}`,46);y+=7;
-        });y+=4;
+          hBar(s.pct,`${s.name}  ${s.earned}/${s.total}`,h2r(s.col));
+        });
+        y+=3;
       }
 
-      secTtl('Respuestas Detalladas  (Alumno / Clave correcta)');
-      const cw3=11,ch3=10,pR3=Math.floor((W-2*M)/(cw3+1));
-      let cx3=M,iy3=y;
-      rawR.answers.forEach((a,idx)=>{
-        if(idx>0&&idx%pR3===0){cx3=M;iy3+=ch3+2;checkY(ch3+4);}
-        if(exclPDF.has(a.n)){
-          doc.setFillColor(250,245,245);rr(doc,cx3,iy3,cw3,ch3,1,'F');
-          doc.setDrawColor(...C.red);doc.setLineWidth(0.3);rr(doc,cx3,iy3,cw3,ch3,1,'S');
-          doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...C.text3);
-          doc.text(`P${a.n}`,cx3+cw3/2,iy3+3.5,{align:'center'});
-          doc.setFontSize(5);doc.setTextColor(...C.red);
-          doc.text('excl.',cx3+cw3/2,iy3+8,{align:'center'});
-        }else{
-          const col=a.earned?C.green:C.red;const lc=a.earned?C.lgreen:C.lred;
-          doc.setFillColor(...lc);rr(doc,cx3,iy3,cw3,ch3,1,'F');
-          doc.setDrawColor(...col);doc.setLineWidth(0.3);rr(doc,cx3,iy3,cw3,ch3,1,'S');
-          doc.setFont('helvetica','normal');doc.setFontSize(5.5);doc.setTextColor(...C.text3);
-          doc.text(`P${a.n}`,cx3+cw3/2,iy3+2.8,{align:'center'});
-          doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...col);
-          doc.text(a.stu||'–',cx3+cw3/2,iy3+6.5,{align:'center'});
-          doc.setFont('helvetica','normal');doc.setFontSize(5);doc.setTextColor(...C.text3);
-          doc.text(a.key,cx3+cw3/2,iy3+9.2,{align:'center'});
-        }
-        cx3+=cw3+1;
-      });
-      y=iy3+ch3+7;
+      // Answer grid
+      sectionTitle('Respuestas Detalladas  (alumno / clave correcta)');
+      answerGrid(rawR.answers);
 
-      // Wrong answers (only from active answers)
+      // Wrong answers analysis
       const wrong=rawR.answers.filter(a=>!a.earned&&!exclPDF.has(a.n));
       if(wrong.length){
-        checkY(18);
-        doc.setFillColor(...C.lred);rr(doc,M,y,W-2*M,6,1,'F');
+        checkY(16);
+        doc.setFillColor(...C.lred);rrect(ML,y,CW,6,1,'F');
         doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...C.red);
-        doc.text(`Reactivos con error (${wrong.length} de ${r.possible} efectivos):`,M+2,y+4.2);y+=8;
+        doc.text(`Reactivos con error (${wrong.length} de ${eff.possible} efectivos):`,ML+2,y+4.2);
+        y+=8;
+        // Group in rows of 8
         const groups=[];let g=[];
-        wrong.forEach(a=>{g.push(`P${a.n}:${a.stu||'-'}>${a.key}`);if(g.length===8){groups.push(g);g=[];}});
+        wrong.forEach(a=>{
+          g.push(`P${a.n}:${a.stu||'–'}→${a.key}`);
+          if(g.length===7){groups.push(g);g=[];}
+        });
         if(g.length)groups.push(g);
         groups.forEach(gr=>{
-          checkY(6);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...C.text);
-          doc.text(gr.join('   '),M,y);y+=5;
-        });y+=3;
+          const line=gr.join('   ');
+          const wls=doc.splitTextToSize(line,CW-2);
+          wls.forEach(wl=>{
+            checkY(5);
+            doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.text);
+            doc.text(wl,ML,y);y+=5;
+          });
+        });
+        y+=3;
+
+        // By section
+        if(sections.length){
+          checkY(sections.length*7+10);
+          doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...C.text);
+          doc.text('Errores por sección:',ML,y);y+=5;
+          sections.forEach(sec=>{
+            const sw=wrong.filter(a=>a.n>=sec.from&&a.n<=sec.to).length;
+            const st=rawR.answers.filter(a=>a.n>=sec.from&&a.n<=sec.to&&!exclPDF.has(a.n)).length;
+            hBar(st?(sw/st*100):0,`${sec.name} — ${sw}/${st} errores`,h2r(sec.col));
+          });
+          y+=3;
+        }
       }
     });
   }
 
-  // ── Footer / page numbers
+  // ── Page numbers + footer
   const total=doc.internal.getNumberOfPages();
   for(let i=1;i<=total;i++){
     doc.setPage(i);
-    doc.setDrawColor(...C.border);doc.setLineWidth(0.3);doc.line(M,287,W-M,287);
-    doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.text3);
-    doc.text('PIMLA — Programa Integral de Monitoreo de Logros de Aprendizaje',M,292);
+    doc.setDrawColor(...C.border);doc.setLineWidth(0.25);doc.line(ML,PH-MB+1,PW-MR,PH-MB+1);
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...C.text3);
+    doc.text('PIMLA — Programa Integral de Monitoreo de Logros de Aprendizaje',ML,PH-MB+5);
     doc.setFont('helvetica','bold');doc.setTextColor(...C.text2);
-    doc.text(`${i} / ${total}`,W-M,292,{align:'right'});
+    doc.text(`${i} / ${total}`,PW-MR,PH-MB+5,{align:'right'});
   }
 
   setProgress(100,'¡Listo!');
