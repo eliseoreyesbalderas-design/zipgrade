@@ -219,6 +219,121 @@ let bgDataUrl = null;  // data-URL de la imagen de fondo
 let bgFmt     = null;  // 'JPEG' | 'PNG'
 
 // ════════════════════════════════════════════════════════════════
+//  CODE-128C — tabla de patrones de barras
+//  Cada entrada: [b1,s1,b2,s2,b3,s3] anchos relativos (barra,espacio)
+//  Índice = valor del símbolo (0-106 usable + STOP especial)
+// ════════════════════════════════════════════════════════════════
+const C128_TABLE = [
+  [2,1,2,2,2,2],[2,2,2,1,2,2],[2,2,2,2,2,1],[1,2,1,2,2,3],[1,2,1,3,2,2],[1,3,1,2,2,2],
+  [1,2,2,2,1,3],[1,2,2,3,1,2],[1,3,2,2,1,2],[2,2,1,2,1,3],[2,2,1,3,1,2],[2,3,1,2,1,2],
+  [1,1,2,2,3,2],[1,2,2,1,3,2],[1,2,2,2,3,1],[1,1,3,2,2,2],[1,2,3,1,2,2],[1,2,3,2,2,1],
+  [2,2,3,2,1,1],[2,2,1,1,3,2],[2,2,1,2,3,1],[2,1,3,2,1,2],[2,2,3,1,1,2],[3,1,2,1,3,1],
+  [3,1,1,2,2,2],[3,2,1,1,2,2],[3,2,1,2,2,1],[3,1,2,2,1,2],[3,2,2,1,1,2],[3,2,2,2,1,1],
+  [2,1,2,1,2,3],[2,1,2,3,2,1],[2,3,2,1,2,1],[1,1,1,3,2,3],[1,3,1,1,2,3],[1,3,1,3,2,1],
+  [1,1,2,3,1,3],[1,3,2,1,1,3],[1,3,2,3,1,1],[2,1,1,3,1,3],[2,3,1,1,1,3],[2,3,1,3,1,1],
+  [1,1,2,1,3,3],[1,1,2,3,3,1],[1,3,2,1,3,1],[1,1,3,1,2,3],[1,1,3,3,2,1],[1,3,3,1,2,1],
+  [3,1,3,1,2,1],[2,1,1,3,3,1],[2,3,1,1,3,1],[2,1,3,1,1,3],[2,1,3,3,1,1],[2,1,3,1,3,1],
+  [3,1,1,1,2,3],[3,1,1,3,2,1],[3,3,1,1,2,1],[3,1,2,1,1,3],[3,1,2,3,1,1],[3,3,2,1,1,1],
+  [3,1,4,1,1,1],[2,2,1,4,1,1],[4,3,1,1,1,1],[1,1,1,2,2,4],[1,1,1,4,2,2],[1,2,1,1,2,4],
+  [1,2,1,4,2,1],[1,4,1,1,2,2],[1,4,1,2,2,1],[1,1,2,2,1,4],[1,1,2,4,1,2],[1,2,2,1,1,4],
+  [1,2,2,4,1,1],[1,4,2,1,1,2],[1,4,2,2,1,1],[2,4,1,2,1,1],[2,2,1,1,1,4],[4,1,3,1,1,1],
+  [2,4,1,1,1,2],[1,3,4,1,1,1],[1,1,1,2,4,2],[1,2,1,1,4,2],[1,2,1,2,4,1],[1,1,4,2,1,2],
+  [1,2,4,1,1,2],[1,2,4,2,1,1],[4,1,1,2,1,2],[4,2,1,1,1,2],[4,2,1,2,1,1],[2,1,2,1,4,1],
+  [2,1,4,1,2,1],[4,1,2,1,2,1],[1,1,1,1,4,3],[1,1,1,3,4,1],[1,3,1,1,4,1],[1,1,4,1,1,3],
+  [1,1,4,3,1,1],[4,1,1,1,1,3],[4,1,1,3,1,1],[1,1,3,1,4,1],[1,1,4,1,3,1],[3,1,1,1,4,1],
+  [4,1,1,1,3,1],[2,1,1,4,1,2],[2,1,1,2,1,4],[2,1,1,2,3,2]
+];
+// STOP Code-128: 2,3,3,1,1,1,2 (suma 13, patrón fijo estándar ISO/IEC 15417)
+const C128_STOP = [2,3,3,1,1,1,2];
+// START C = índice 105
+const C128_START_C = 105;
+
+
+
+// ──────────────────────────────────────────────────────────────
+//  buildBarcode128C(id9)
+//  Genera el array de anchos de módulos para un ID de 9 dígitos.
+//  Code 128C codifica pares de dígitos → necesita longitud par.
+//  Se añade un "0" delante si la longitud es impar (no aplica
+//  para IDs de exactamente 9 dígitos: se usa "0" + id9 → 10 chars).
+// ──────────────────────────────────────────────────────────────
+function buildBarcode128C(id9) {
+  // Normalizar a 10 dígitos (par) anteponiendo un cero
+  const digits = ('0' + id9.replace(/\D/g, '').slice(0, 9)).slice(-10);
+
+  // Decodificar pares de dígitos en valores de símbolo Code-128C
+  const symbols = [];
+  for (let i = 0; i < digits.length; i += 2) {
+    symbols.push(parseInt(digits.slice(i, i + 2), 10));
+  }
+
+  // Checksum Code-128 correcto:
+  // sum = valor(START) + Σ [ valor(símbolo_i) × posición_i ]
+  // donde posición_i es 1-based (primer dato = 1, segundo = 2, ...)
+  let checksum = C128_START_C;
+  for (let i = 0; i < symbols.length; i++) {
+    checksum += symbols[i] * (i + 1);
+  }
+  const check = checksum % 103;
+
+  // Construir array de módulos: START + datos + CHECK + STOP
+  const modules = [
+    ...C128_TABLE[C128_START_C],
+    ...symbols.flatMap(v => C128_TABLE[v]),
+    ...C128_TABLE[check],
+    ...C128_STOP
+  ];
+
+  return modules;
+}
+
+// ──────────────────────────────────────────────────────────────
+//  drawBarcode(doc, id9)
+//  Dibuja el código de barras Code-128C centrado en la parte
+//  inferior central de la página, con el ID legible debajo.
+//
+//  Posición vertical:
+//    - Zona de código de barras: y = PAGE_H - 18  (18 mm del borde)
+//    - Altura de barras: 10 mm
+//    - Texto ID debajo: y = PAGE_H - 6
+// ──────────────────────────────────────────────────────────────
+function drawBarcode(doc, id9) {
+  if (!id9 || id9.trim().length === 0) return;
+
+  const modules = buildBarcode128C(id9);
+
+  const mw     = 0.8;   // ancho de modulo base en mm
+  const bh     = 8;     // altura de barras en mm
+  const quiet  = 10 * mw; // zona quiet: minimo 10 modulos a cada lado (estandar Code-128)
+
+  // Ancho total solo de las barras
+  const barsW = modules.reduce((acc, m) => acc + m * mw, 0);
+
+  // Ancho total incluyendo zonas quiet
+  const totalW = barsW + quiet * 2;
+
+  // Centrado horizontal (las barras arrancan despues del quiet izquierdo)
+  const x0 = (PAGE_W - totalW) / 2 + quiet;
+
+  // Posicion vertical: pegado al borde inferior
+  const y0 = PAGE_H - bh - 4;
+
+  // Fondo blanco explicito sobre la zona quiet + barras (garantiza contraste)
+  doc.setFillColor(255, 255, 255);
+  doc.rect((PAGE_W - totalW) / 2, y0 - 1, totalW, bh + 2, 'F');
+
+  // Dibujar barras negras
+  doc.setFillColor(0, 0, 0);
+  let x = x0;
+  modules.forEach((w, i) => {
+    if (i % 2 === 0) {
+      doc.rect(x, y0, w * mw, bh, 'F');
+    }
+    x += w * mw;
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
 //  CSV — DRAG & DROP / SELECT
 // ════════════════════════════════════════════════════════════════
 const dz = document.getElementById('dz');
@@ -443,15 +558,12 @@ const tick = () => new Promise(r => setTimeout(r, 0));
 //    1. Imagen de fondo (z más bajo — toda la página)
 //    2. Texto (nombres, apellidos, dígitos, grupo)
 //    3. Círculos negros (z más alto)
+//    4. Código de barras Code-128C (parte inferior central)
 // ────────────────────────────────────────────────────────────────
 function drawPage(doc, row) {
   const C = CAL;
 
   // ── CAPA 1: IMAGEN DE FONDO ────────────────────────────────────
-  // Se dibuja primero para que quede detrás de todo lo demás.
-  // addImage(imageData, format, x, y, width, height)
-  // x=0, y=0 → esquina superior izquierda de la página
-  // width=PAGE_W, height=PAGE_H → cubre la hoja carta completa al 100%
   if (bgDataUrl) {
     doc.addImage(bgDataUrl, bgFmt, 0, 0, PAGE_W, PAGE_H);
   }
@@ -499,8 +611,13 @@ function drawPage(doc, row) {
     doc.circle(C.asigCentersX[col], C.digitRowsY[d], C.digitCircleR, 'F');
   }
 
-  // Nota: el círculo de grupo se omite intencionalmente.
-  // El grupo ya queda registrado con la letra en el recuadro superior.
+  // ── CAPA 4: CÓDIGO DE BARRAS CODE-128C ─────────────────────────
+  // Usa el campo ASIGNACION (9 dígitos) como ID del documento.
+  // Se dibuja centrado en la parte inferior de la hoja.
+  const docId = (row.ASIGNACION || '').replace(/\D/g, '').slice(0, 9).padStart(9, '0');
+  if (docId.replace(/^0+/, '').length > 0) {
+    drawBarcode(doc, docId);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════
